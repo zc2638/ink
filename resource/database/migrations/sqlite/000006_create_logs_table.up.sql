@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS `logs`
+(
+    `id`         INTEGER PRIMARY KEY,
+    `data`       MEDIUMBLOB,
+
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+);

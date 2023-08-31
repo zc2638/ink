@@ -1,0 +1,157 @@
+// Copyright © 2023 zc2638 <zc2638@qq.com>.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package command
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/99nil/gopkg/sets"
+	"github.com/spf13/cobra"
+	"github.com/zc2638/wslog"
+	"golang.org/x/sync/errgroup"
+	"gorm.io/gorm"
+
+	"github.com/zc2638/ink/core/constant"
+	"github.com/zc2638/ink/core/handler"
+	"github.com/zc2638/ink/core/scheduler"
+	v1 "github.com/zc2638/ink/pkg/api/core/v1"
+	storageV1 "github.com/zc2638/ink/pkg/api/storage/v1"
+	"github.com/zc2638/ink/pkg/database"
+	"github.com/zc2638/ink/pkg/livelog"
+	"github.com/zc2638/ink/pkg/queue"
+	"github.com/zc2638/ink/pkg/server"
+	"github.com/zc2638/ink/pkg/signals"
+	"github.com/zc2638/ink/resource"
+)
+
+func NewDaemon() *cobra.Command {
+	opt := new(DaemonOption)
+	opt.ConfigPath = DefaultConfig(constant.DaemonName)
+
+	cmd := &cobra.Command{
+		Use:          constant.DaemonName,
+		SilenceUsage: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var cfg DaemonConfig
+			if _, err := ParseConfig(opt.ConfigPath, &cfg, constant.DaemonName); err != nil {
+				return err
+			}
+			if err := cfg.Validate(); err != nil {
+				return fmt.Errorf("validate config failed: %v", err)
+			}
+			wslog.Infof("Config: %#v", cfg)
+
+			log := wslog.New(cfg.Logger)
+			db, err := database.New(&cfg.Database)
+			if err != nil {
+				return fmt.Errorf("init database failed: %v", err)
+			}
+			if err := resource.MigrateDatabase(cfg.Database.Driver, cfg.Database.DSN); err != nil {
+				return fmt.Errorf("migrate database failed: %v", err)
+			}
+
+			ll, err := livelog.New(cfg.Livelog)
+			if err != nil {
+				return fmt.Errorf("init livelog failed: %v", err)
+			}
+
+			sched := scheduler.New(listInCompleteStages(db))
+
+			srv := server.New(cfg.Server)
+			srv.ReadTimeout = 0
+			srv.WriteTimeout = 0
+			srv.Handler = handler.New(log, db, ll, sched)
+			log.Info(fmt.Sprintf("Daemon listen on %s", srv.Addr))
+
+			eg, ctx := errgroup.WithContext(context.Background())
+			eg.Go(func() error { return signals.Exit(ctx) })
+			eg.Go(func() error { return srv.ListenAndServe() })
+			eg.Go(func() error { return server.Shutdown(ctx, srv) })
+			return eg.Wait()
+		},
+	}
+
+	cmd.PersistentFlags().StringVarP(&opt.ConfigPath, "config", "c", opt.ConfigPath, "config path")
+	return cmd
+}
+
+type DaemonOption struct {
+	ConfigPath string
+}
+
+type DaemonConfig struct {
+	Server   server.Config   `json:"server"`
+	Logger   wslog.Config    `json:"logger,omitempty"`
+	Database database.Config `json:"database,omitempty"`
+	Queue    queue.Config    `json:"queue,omitempty"`
+	Livelog  livelog.Config  `json:"livelog"`
+}
+
+func (c *DaemonConfig) Validate() error {
+	if c.Server.Port <= 0 {
+		return fmt.Errorf("server port (%d) is not available", c.Server.Port)
+	}
+	return nil
+}
+
+func listInCompleteStages(db *gorm.DB) scheduler.StoreFunc {
+	return func(ctx context.Context) ([]*v1.StageStatus, error) {
+		db = db.WithContext(ctx)
+
+		var list []storageV1.StageStatus
+		if err := db.Where(&storageV1.StageStatus{Phase: v1.PhasePending.String()}).Find(&list).Error; err != nil {
+			return nil, err
+		}
+
+		ids := sets.New[uint64]()
+		for _, v := range list {
+			ids.Add(v.BoxID)
+		}
+		if ids.Len() > 0 {
+			var boxes []storageV1.Box
+			if err := db.Where("id in (?)", ids.List()).Find(&boxes).Error; err != nil {
+				return nil, err
+			}
+			for _, v := range boxes {
+				ids.Remove(v.ID)
+			}
+			if ids.Len() > 0 {
+				if err := db.Where("box_id in (?)", ids.List()).Updates(&storageV1.StageStatus{
+					Phase:   v1.PhaseSkipped.String(),
+					Started: time.Now().Unix(),
+					Stopped: time.Now().Unix(),
+				}).Error; err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		result := make([]*v1.StageStatus, 0, len(list))
+		for _, v := range list {
+			if ids.Has(v.BoxID) {
+				continue
+			}
+
+			item, err := v.ToAPI()
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, item)
+		}
+		return result, nil
+	}
+}

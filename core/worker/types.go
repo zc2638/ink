@@ -1,0 +1,265 @@
+// Copyright © 2023 zc2638 <zc2638@qq.com>.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package worker
+
+import (
+	"fmt"
+	"maps"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/zc2638/ink/core/constant"
+	v1 "github.com/zc2638/ink/pkg/api/core/v1"
+)
+
+type State struct {
+	ExitCode  int
+	OOMKilled bool
+}
+
+type Stage struct {
+	ID        string
+	Name      string
+	Namespace string
+	Labels    map[string]string
+
+	Steps       []*Step
+	WorkingDir  string
+	Concurrency int
+	Volumes     []Volume
+	DependsOn   []string
+	Worker      *v1.Worker
+}
+
+func (s *Stage) GetStep(name string) *Step {
+	for _, v := range s.Steps {
+		if v.Name == name {
+			return v
+		}
+	}
+	return nil
+}
+
+type (
+	Secret struct {
+		Name string
+		Data string
+	}
+
+	Volume struct {
+		v1.Volume
+
+		ID string
+	}
+
+	VolumeDevice struct {
+		Name string
+		Path string
+	}
+)
+
+type Step struct {
+	ID              string
+	Name            string
+	Image           string
+	ImagePullPolicy v1.PullPolicy
+	Privileged      bool
+	WorkingDir      string
+	Network         string
+	Env             map[string]string
+	Secrets         []Secret
+	DNS             []string
+	DNSSearch       []string
+	ExtraHosts      []string
+	Entrypoint      []string
+	Shell           []string
+	Command         []string
+	Args            []string
+	VolumeMounts    []v1.VolumeMount
+	Devices         []v1.VolumeDevice
+}
+
+func (s *Step) CombineEnv(env ...any) map[string]string {
+	out := maps.Clone(s.Env)
+	for _, v := range env {
+		switch value := v.(type) {
+		case map[string]string:
+			for key, val := range value {
+				out[key] = val
+			}
+		case string:
+			parts := strings.SplitN(value, "=", 2)
+			if len(parts) == 2 {
+				out[parts[0]] = parts[1]
+			}
+		}
+	}
+	return out
+}
+
+func completeID(id string) string {
+	return constant.Name + "-" + id
+}
+
+func Convert(in *v1.Stage, status *v1.StageStatus, secrets []*v1.Secret) (*Stage, error) {
+	out := &Stage{
+		ID:          completeID(strconv.FormatUint(status.ID, 10)),
+		Name:        in.Name,
+		Namespace:   in.Namespace,
+		Labels:      in.Labels,
+		WorkingDir:  in.Spec.WorkingDir,
+		Concurrency: in.Spec.Concurrency,
+		DependsOn:   in.Spec.DependsOn,
+		Worker:      in.Spec.Worker,
+	}
+
+	for _, v := range in.Spec.Volumes {
+		out.Volumes = append(out.Volumes, Volume{Volume: v})
+	}
+
+	for _, v := range in.Spec.Steps {
+		var id string
+		for _, vv := range status.Steps {
+			if vv.Name == v.Name {
+				id = strconv.FormatUint(vv.ID, 10)
+				break
+			}
+		}
+		if id == "" {
+			return nil, fmt.Errorf("step not found: %s", v.Name)
+		}
+
+		env := make(map[string]string)
+		for _, ev := range v.Env {
+			if ev.Name == "" {
+				continue
+			}
+			if ev.Value != "" {
+				env[ev.Name] = ev.Value
+				continue
+			}
+			// secret to env
+			if ev.ValueFrom != nil && ev.ValueFrom.SecretKeyRef != nil {
+				secValue := ev.ValueFrom.SecretKeyRef.Find(secrets)
+				env[ev.Name] = secValue
+			}
+		}
+
+		out.Steps = append(out.Steps, &Step{
+			ID:              completeID(id),
+			Name:            v.Name,
+			Image:           v.Image,
+			ImagePullPolicy: v.ImagePullPolicy,
+			Privileged:      v.Privileged,
+			WorkingDir:      v.WorkingDir,
+			Env:             env,
+			Entrypoint:      v.Entrypoint,
+			Shell:           v.Shell,
+			Command:         v.Command,
+			Args:            v.Args,
+			VolumeMounts:    v.VolumeMounts,
+			Devices:         v.Devices,
+			DNS:             v.DNS,
+			DNSSearch:       v.DNSSearch,
+			ExtraHosts:      v.ExtraHosts,
+		})
+	}
+
+	Compile(out)
+	return out, nil
+}
+
+func Compile(stage *Stage) {
+	if len(stage.WorkingDir) == 0 {
+		stage.WorkingDir = constant.WorkspacePath
+	} else if !filepath.IsAbs(stage.WorkingDir) {
+		stage.WorkingDir = filepath.Join(constant.WorkspacePath, stage.WorkingDir)
+	}
+
+	if IsRestrictedVolume(stage.WorkingDir) {
+		stage.WorkingDir = constant.WorkspacePath
+	}
+
+	// add the workspace volume
+	volume := Volume{
+		ID: stage.ID,
+		Volume: v1.Volume{
+			Name:     "_ink_volume",
+			EmptyDir: &v1.EmptyDirVolume{},
+		},
+	}
+	stage.Volumes = append([]Volume{volume}, stage.Volumes...)
+
+	for _, s := range stage.Steps {
+		switch s.ImagePullPolicy {
+		case v1.PullAlways, v1.PullNever, v1.PullIfNotPresent:
+		default:
+			s.ImagePullPolicy = v1.PullIfNotPresent
+		}
+
+		if s.WorkingDir == "" {
+			s.WorkingDir = stage.WorkingDir
+		}
+		vm := v1.VolumeMount{
+			Name: volume.Name,
+			Path: s.WorkingDir,
+		}
+		s.VolumeMounts = append(s.VolumeMounts, vm)
+	}
+}
+
+// IsRestrictedVolume is a helper function that
+// returns true if mounting the volume is restricted for untrusted containers.
+func IsRestrictedVolume(path string) bool {
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return true
+	}
+
+	path = strings.ToLower(path)
+
+	switch {
+	case path == "/":
+	case path == "/etc":
+	case path == "/etc/docker" || strings.HasPrefix(path, "/etc/docker/"):
+	case path == "/var":
+	case path == "/var/run" || strings.HasPrefix(path, "/var/run/"):
+	case path == "/proc" || strings.HasPrefix(path, "/proc/"):
+	case path == "/usr/local/bin" || strings.HasPrefix(path, "/usr/local/bin/"):
+	case path == "/usr/local/sbin" || strings.HasPrefix(path, "/usr/local/sbin/"):
+	case path == "/usr/bin" || strings.HasPrefix(path, "/usr/bin/"):
+	case path == "/bin" || strings.HasPrefix(path, "/bin/"):
+	case path == "/mnt" || strings.HasPrefix(path, "/mnt/"):
+	case path == "/mount" || strings.HasPrefix(path, "/mount/"):
+	case path == "/media" || strings.HasPrefix(path, "/media/"):
+	case path == "/sys" || strings.HasPrefix(path, "/sys/"):
+	case path == "/dev" || strings.HasPrefix(path, "/dev/"):
+	default:
+		return false
+	}
+
+	return true
+}
+
+func EnvToSlice(envMap map[string]string) []string {
+	env := make([]string, 0, len(envMap))
+	for ek, ev := range envMap {
+		env = append(env, fmt.Sprintf("%s=%s", ek, ev))
+	}
+	sort.Strings(env)
+	return env
+}

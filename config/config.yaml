@@ -1,0 +1,21 @@
+server:
+  port: 2678
+database:
+  driver: sqlite
+  dsn: /tmp/ink.db
+  debug: true
+livelog:
+  file:
+    dir: /tmp/ink_cache
+
+worker:
+  logger:
+    level: debug
+  workers:
+    - count: 1
+      addr: http://localhost:2678
+      worker:
+        kind: docker
+    - addr: http://localhost:2678
+      worker:
+        kind: host
