@@ -22,9 +22,9 @@ import (
 const DefaultNamespace = "default"
 
 const (
-	KindBox    = "Box"
-	KindStage  = "Stage"
-	KindSecret = "Secret"
+	KindBox      = "Box"
+	KindWorkflow = "Workflow"
+	KindSecret   = "Secret"
 )
 
 const LabelStatus = "ink.io/status"

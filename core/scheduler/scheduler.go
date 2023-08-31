@@ -26,7 +26,7 @@ type Interface interface {
 	Schedule(context.Context)
 
 	// Request requests the next stage scheduled for execution.
-	Request(context.Context, v1.Worker) (*v1.StageStatus, error)
+	Request(context.Context, v1.Worker) (*v1.Stage, error)
 
 	// Cancel cancels scheduled or running jobs associated
 	// with the parent build ID.

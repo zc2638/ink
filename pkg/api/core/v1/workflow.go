@@ -14,14 +14,14 @@
 
 package v1
 
-type Stage struct {
+type Workflow struct {
 	Metadata `yaml:",inline"`
 
-	Spec StageSpec `json:"spec" yaml:"spec"`
+	Spec WorkflowSpec `json:"spec" yaml:"spec"`
 }
 
-type StageSpec struct {
-	Steps       []Step   `json:"steps" yaml:"steps"`
+type WorkflowSpec struct {
+	Steps       []Flow   `json:"steps" yaml:"steps"`
 	WorkingDir  string   `json:"workingDir,omitempty" yaml:"workingDir,omitempty"`
 	Concurrency int      `json:"concurrency,omitempty" yaml:"concurrency,omitempty"`
 	Volumes     []Volume `json:"volumes,omitempty" yaml:"volumes,omitempty"`
@@ -29,7 +29,7 @@ type StageSpec struct {
 	Worker      *Worker  `json:"worker,omitempty" yaml:"worker,omitempty"`
 }
 
-type Step struct {
+type Flow struct {
 	Name            string         `json:"name" yaml:"name"`
 	Image           string         `json:"image,omitempty" yaml:"image,omitempty"`
 	ImagePullPolicy PullPolicy     `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
@@ -53,13 +53,13 @@ func (s PullPolicy) String() string { return string(s) }
 
 const (
 	// PullAlways means that kubelet always attempts to pull the latest image.
-	// Step will fail If the pull fails.
+	// Flow will fail If the pull fails.
 	PullAlways PullPolicy = "Always"
 	// PullNever means that kubelet never pulls an image, but only uses a local image.
-	// Step will fail if the image isn't present.
+	// Flow will fail if the image isn't present.
 	PullNever PullPolicy = "Never"
 	// PullIfNotPresent means that kubelet pulls if the image isn't present on disk.
-	// Step will fail if the image isn't present and the pull fails.
+	// Flow will fail if the image isn't present and the pull fails.
 	PullIfNotPresent PullPolicy = "IfNotPresent"
 )
 
@@ -101,7 +101,7 @@ type VolumeDevice struct {
 	Path string `json:"path" yaml:"path"`
 }
 
-// EnvVar represents an environment variable present in a Step.
+// EnvVar represents an environment variable present in a Flow.
 type EnvVar struct {
 	// Name of the environment variable.
 	Name string `json:"name" yaml:"name"`

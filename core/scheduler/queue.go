@@ -22,7 +22,7 @@ import (
 	v1 "github.com/zc2638/ink/pkg/api/core/v1"
 )
 
-type StoreFunc func(ctx context.Context) ([]*v1.StageStatus, error)
+type StoreFunc func(ctx context.Context) ([]*v1.Stage, error)
 
 type queue struct {
 	sync.Mutex
@@ -83,7 +83,7 @@ func (q *queue) Resume(ctx context.Context) error {
 	return nil
 }
 
-func (q *queue) Request(ctx context.Context, params v1.Worker) (*v1.StageStatus, error) {
+func (q *queue) Request(ctx context.Context, params v1.Worker) (*v1.Stage, error) {
 	if params.Kind == "" {
 		params.Kind = v1.WorkerKindDocker
 	}
@@ -91,7 +91,7 @@ func (q *queue) Request(ctx context.Context, params v1.Worker) (*v1.StageStatus,
 	w := &worker{
 		kind:    params.Kind,
 		labels:  params.Labels,
-		channel: make(chan *v1.StageStatus),
+		channel: make(chan *v1.Stage),
 	}
 	if params.Platform != nil {
 		w.os = params.Platform.OS
@@ -211,7 +211,7 @@ type worker struct {
 	os      string
 	arch    string
 	labels  map[string]string
-	channel chan *v1.StageStatus
+	channel chan *v1.Stage
 }
 
 func checkLabels(a, b map[string]string) bool {
@@ -226,7 +226,7 @@ func checkLabels(a, b map[string]string) bool {
 	return true
 }
 
-func withinLimits(stage *v1.StageStatus, siblings []*v1.StageStatus) bool {
+func withinLimits(stage *v1.Stage, siblings []*v1.Stage) bool {
 	if stage.Limit == 0 {
 		return true
 	}
@@ -249,7 +249,7 @@ func withinLimits(stage *v1.StageStatus, siblings []*v1.StageStatus) bool {
 	return count < stage.Limit
 }
 
-func shouldThrottle(stage *v1.StageStatus, siblings []*v1.StageStatus, limit int) bool {
+func shouldThrottle(stage *v1.Stage, siblings []*v1.Stage, limit int) bool {
 	// if no throttle limit is defined (default) then
 	// return false to indicate no throttling is needed.
 	if limit == 0 {

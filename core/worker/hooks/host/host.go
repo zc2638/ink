@@ -21,11 +21,10 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/zc2638/ink/pkg/shell"
-
 	"github.com/zc2638/wslog"
 
 	"github.com/zc2638/ink/core/worker"
+	"github.com/zc2638/ink/pkg/shell"
 )
 
 func New() (worker.Hook, error) {
@@ -34,16 +33,16 @@ func New() (worker.Hook, error) {
 
 type host struct{}
 
-func (h *host) StageBegin(ctx context.Context, stage *worker.Stage) error {
+func (h *host) Begin(ctx context.Context, spec *worker.Workflow) error {
 	log := wslog.FromContext(ctx)
 
-	homedir := getHomedir(stage)
+	homedir := getHomedir(spec)
 	scriptPath := filepath.Join(homedir, "scripts")
 	if err := os.MkdirAll(scriptPath, os.ModePerm); err != nil {
 		return err
 	}
 
-	for _, step := range stage.Steps {
+	for _, step := range spec.Steps {
 		cmdName, args := shell.Command()
 		if len(step.Shell) > 0 {
 			cmdName = step.Shell[0]
@@ -55,24 +54,28 @@ func (h *host) StageBegin(ctx context.Context, stage *worker.Stage) error {
 			log.Error("cannot write file", "error", err)
 			return err
 		}
+		args = append(args, fp)
+		step.Args = args
 		step.Command = []string{cmdName}
-		step.Args = append(args, fp)
 	}
 	return nil
 }
 
-func (h *host) StageEnd(ctx context.Context, stage *worker.Stage) error {
-	return os.RemoveAll(getRootDir(stage))
+func (h *host) End(_ context.Context, spec *worker.Workflow) error {
+	return os.RemoveAll(getRootDir(spec))
 }
 
-func (h *host) Step(ctx context.Context, stage *worker.Stage, step *worker.Step, writer io.Writer) (*worker.State, error) {
+func (h *host) Step(ctx context.Context, spec *worker.Workflow, step *worker.Step, writer io.Writer) (*worker.State, error) {
 	if len(step.Command) == 0 {
 		return nil, nil
 	}
 
-	homedir := getHomedir(stage)
-	rootDir := getRootDir(stage)
+	homedir := getHomedir(spec)
+	rootDir := getRootDir(spec)
 	workingDir := filepath.Join(rootDir, step.WorkingDir)
+	if err := os.MkdirAll(workingDir, os.ModePerm); err != nil {
+		return nil, err
+	}
 
 	env := step.CombineEnv(map[string]string{
 		"HOME":          homedir,

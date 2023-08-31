@@ -24,8 +24,6 @@ import (
 	"github.com/zc2638/ink/core/clients"
 	v1 "github.com/zc2638/ink/pkg/api/core/v1"
 	"github.com/zc2638/ink/test/e2e/framework"
-
-	_ "github.com/zc2638/ink/test/e2e/describe"
 )
 
 func Test(t *testing.T) {

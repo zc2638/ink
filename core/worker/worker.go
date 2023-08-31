@@ -32,9 +32,9 @@ import (
 )
 
 type Hook interface {
-	StageBegin(ctx context.Context, stage *Stage) error
-	StageEnd(ctx context.Context, stage *Stage) error
-	Step(ctx context.Context, stage *Stage, step *Step, writer io.Writer) (*State, error)
+	Begin(ctx context.Context, spec *Workflow) error
+	End(ctx context.Context, spec *Workflow) error
+	Step(ctx context.Context, spec *Workflow, step *Step, writer io.Writer) (*State, error)
 }
 
 type Config struct {
@@ -123,10 +123,9 @@ func Run(ctx context.Context, client clients.ClientV1, hook Hook) error {
 	}
 	log = log.With(
 		"stage_name", stage.Name,
-		"stage_namespace", stage.Namespace,
 		"stage_id", stage.ID,
 	)
-	log.Debug("Request stage sucess")
+	log.Debug("Request stage success")
 
 	if err := client.Accept(ctx, stage.ID); err != nil {
 		return fmt.Errorf("accept failed: %v", err)
@@ -137,11 +136,12 @@ func Run(ctx context.Context, client clients.ClientV1, hook Hook) error {
 	if err != nil {
 		return fmt.Errorf("get data failed: %v", err)
 	}
-	stage = data.Stage
+	workflow := data.Workflow
 	status := data.Status
-	if stage == nil || status == nil {
+	if workflow == nil || status == nil {
 		return errors.New("stage data not found")
 	}
+	log = log.With("namespace", workflow.GetNamespace())
 	log.Debug("Get data success", "build_id", status.BuildID)
 
 	ctx = wslog.WithContext(ctx, log)
@@ -154,7 +154,7 @@ func Run(ctx context.Context, client clients.ClientV1, hook Hook) error {
 		return err
 	})
 	eg.Go(func() error {
-		if err := execute(runCtx, client, hook, stage, status, data.Secrets); err != nil {
+		if err := execute(runCtx, client, hook, workflow, status, data.Secrets); err != nil {
 			return err
 		}
 		return context.Canceled
@@ -173,14 +173,14 @@ func execute(
 	ctx context.Context,
 	client clients.ClientV1,
 	hook Hook,
-	stageData *v1.Stage,
-	status *v1.StageStatus,
+	workflow *v1.Workflow,
+	status *v1.Stage,
 	secrets []*v1.Secret,
 ) error {
 	log := wslog.FromContext(ctx)
 	log.Debug("Execute stage begin request")
 
-	stage, err := Convert(stageData, status, secrets)
+	spec, err := Convert(workflow, status, secrets)
 	if err != nil {
 		return fmt.Errorf("convert to worker stage failed: %v", err)
 	}
@@ -196,14 +196,14 @@ func execute(
 	}
 
 	log.Debug("Execute stage begin hook")
-	if err := hook.StageBegin(ctx, stage); err != nil {
+	if err := hook.Begin(ctx, spec); err != nil {
 		failed = true
 		status.Error = err.Error()
 		log.Error("Execute stage begin hook failed", "error", err)
 	}
 
 	for _, step := range status.Steps {
-		stepSpec := stage.GetStep(step.Name)
+		stepSpec := spec.GetStep(step.Name)
 
 		step.Started = time.Now().Unix()
 		if stepSpec == nil || failed {
@@ -240,7 +240,7 @@ func execute(
 			}
 		}
 		wc := livelog.NewWriter(logHandle)
-		state, err := hook.Step(ctx, stage, stepSpec, wc)
+		state, err := hook.Step(ctx, spec, stepSpec, wc)
 		_ = wc.Close()
 
 		step.Phase = v1.PhaseSucceeded
@@ -281,7 +281,7 @@ func execute(
 
 	if !failed {
 		log.Debug("Execute stage end hook")
-		if err := hook.StageEnd(ctx, stage); err != nil {
+		if err := hook.End(ctx, spec); err != nil {
 			log.Error("Execute stage end hook failed", "error", err)
 		}
 	}
@@ -299,7 +299,7 @@ func execute(
 	return nil
 }
 
-func cancel(ctx context.Context, client clients.ClientV1, status *v1.StageStatus) error {
+func cancel(ctx context.Context, client clients.ClientV1, status *v1.Stage) error {
 	if status.Phase.IsDone() {
 		return nil
 	}

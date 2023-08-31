@@ -27,13 +27,13 @@ type Box struct {
 	Resources []BoxResource `json:"resources" yaml:"resources"`
 }
 
-func (b *Box) Validate(stages []*Stage) error {
+func (b *Box) Validate(workflows []*Workflow) error {
 	graph := cycle.New()
-	for _, s := range stages {
+	for _, s := range workflows {
 		graph.Add(s.Name, s.Spec.DependsOn...)
 	}
 	if graph.DetectCycles() {
-		return errors.New("dependency cycle detected in Stage")
+		return errors.New("dependency cycle detected in workflows")
 	}
 	return nil
 }

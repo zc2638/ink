@@ -50,7 +50,7 @@ func Script(commands []string) string {
 	fmt.Fprintln(buf)
 	for _, command := range commands {
 		escaped := fmt.Sprintf("%q", command)
-		escaped = strings.Replace(escaped, "$", `\$`, -1)
+		escaped = strings.ReplaceAll(escaped, "$", `\$`)
 		buf.WriteString(fmt.Sprintf(scriptFormat, escaped, command))
 	}
 	return buf.String()

@@ -109,11 +109,11 @@ func (c *DaemonConfig) Validate() error {
 }
 
 func listInCompleteStages(db *gorm.DB) scheduler.StoreFunc {
-	return func(ctx context.Context) ([]*v1.StageStatus, error) {
+	return func(ctx context.Context) ([]*v1.Stage, error) {
 		db = db.WithContext(ctx)
 
-		var list []storageV1.StageStatus
-		if err := db.Where(&storageV1.StageStatus{Phase: v1.PhasePending.String()}).Find(&list).Error; err != nil {
+		var list []storageV1.Stage
+		if err := db.Where(&storageV1.Stage{Phase: v1.PhasePending.String()}).Find(&list).Error; err != nil {
 			return nil, err
 		}
 
@@ -130,7 +130,7 @@ func listInCompleteStages(db *gorm.DB) scheduler.StoreFunc {
 				ids.Remove(v.ID)
 			}
 			if ids.Len() > 0 {
-				if err := db.Where("box_id in (?)", ids.List()).Updates(&storageV1.StageStatus{
+				if err := db.Where("box_id in (?)", ids.List()).Updates(&storageV1.Stage{
 					Phase:   v1.PhaseSkipped.String(),
 					Started: time.Now().Unix(),
 					Stopped: time.Now().Unix(),
@@ -140,7 +140,7 @@ func listInCompleteStages(db *gorm.DB) scheduler.StoreFunc {
 			}
 		}
 
-		result := make([]*v1.StageStatus, 0, len(list))
+		result := make([]*v1.Stage, 0, len(list))
 		for _, v := range list {
 			if ids.Has(v.BoxID) {
 				continue

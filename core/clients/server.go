@@ -34,11 +34,11 @@ type Server interface {
 }
 
 type ServerV1 interface {
-	StageList(ctx context.Context, page v1.Pagination) ([]*v1.Stage, *v1.Pagination, error)
-	StageInfo(ctx context.Context, namespace, name string) (*v1.Stage, error)
-	StageCreate(ctx context.Context, data *v1.Stage) error
-	StageUpdate(ctx context.Context, data *v1.Stage) error
-	StageDelete(ctx context.Context, namespace, name string) error
+	WorkflowList(ctx context.Context, page v1.Pagination) ([]*v1.Workflow, *v1.Pagination, error)
+	WorkflowInfo(ctx context.Context, namespace, name string) (*v1.Workflow, error)
+	WorkflowCreate(ctx context.Context, data *v1.Workflow) error
+	WorkflowUpdate(ctx context.Context, data *v1.Workflow) error
+	WorkflowDelete(ctx context.Context, namespace, name string) error
 
 	BoxList(ctx context.Context, page v1.Pagination) ([]*v1.Box, *v1.Pagination, error)
 	BoxInfo(ctx context.Context, namespace, name string) (*v1.Box, error)
@@ -80,55 +80,55 @@ func (c *serverV1) R(ctx context.Context) *resty.Request {
 	return c.rc.R().SetContext(ctx)
 }
 
-func (c *serverV1) StageList(ctx context.Context, page v1.Pagination) ([]*v1.Stage, *v1.Pagination, error) {
+func (c *serverV1) WorkflowList(ctx context.Context, page v1.Pagination) ([]*v1.Workflow, *v1.Pagination, error) {
 	type resultT struct {
 		v1.Pagination
-		Items []*v1.Stage `json:"items"`
+		Items []*v1.Workflow `json:"items"`
 	}
 
 	var result resultT
 	vs := page.ToValues()
 	req := c.R(ctx).SetQueryParamsFromValues(vs).SetResult(&result)
-	resp, err := req.Get("/stage")
+	resp, err := req.Get("/workflow")
 	if err := handleClientError(resp, err); err != nil {
 		return nil, nil, err
 	}
 	return result.Items, &result.Pagination, nil
 }
 
-func (c *serverV1) StageInfo(ctx context.Context, namespace, name string) (*v1.Stage, error) {
-	var result v1.Stage
+func (c *serverV1) WorkflowInfo(ctx context.Context, namespace, name string) (*v1.Workflow, error) {
+	var result v1.Workflow
 	req := c.R(ctx).
 		SetPathParam("namespace", namespace).
 		SetPathParam("name", name).
 		SetResult(&result)
-	resp, err := req.Get("/stage/{namespace}/{name}")
+	resp, err := req.Get("/workflow/{namespace}/{name}")
 	if err := handleClientError(resp, err); err != nil {
 		return nil, err
 	}
 	return &result, nil
 }
 
-func (c *serverV1) StageCreate(ctx context.Context, data *v1.Stage) error {
+func (c *serverV1) WorkflowCreate(ctx context.Context, data *v1.Workflow) error {
 	req := c.R(ctx).SetBody(data)
-	resp, err := req.Post("/stage")
+	resp, err := req.Post("/workflow")
 	return handleClientError(resp, err)
 }
 
-func (c *serverV1) StageUpdate(ctx context.Context, data *v1.Stage) error {
+func (c *serverV1) WorkflowUpdate(ctx context.Context, data *v1.Workflow) error {
 	req := c.R(ctx).
 		SetBody(data).
 		SetPathParam("namespace", data.GetNamespace()).
 		SetPathParam("name", data.GetName())
-	resp, err := req.Put("/stage/{namespace}/{name}")
+	resp, err := req.Put("/workflow/{namespace}/{name}")
 	return handleClientError(resp, err)
 }
 
-func (c *serverV1) StageDelete(ctx context.Context, namespace, name string) error {
+func (c *serverV1) WorkflowDelete(ctx context.Context, namespace, name string) error {
 	req := c.R(ctx).
 		SetPathParam("namespace", namespace).
 		SetPathParam("name", name)
-	resp, err := req.Delete("/stage/{namespace}/{name}")
+	resp, err := req.Delete("/workflow/{namespace}/{name}")
 	return handleClientError(resp, err)
 }
 

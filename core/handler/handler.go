@@ -56,6 +56,7 @@ func New(log *wslog.Logger, db *gorm.DB, ll livelog.Interface, sched scheduler.I
 	apiMiddlewares := chi.Middlewares{
 		cors.New(corsOpts).Handler,
 		serviceMiddleware(log, ll, sched, db),
+		timeoutMiddleware,
 	}
 
 	mux := chi.NewMux()

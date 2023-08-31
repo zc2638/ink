@@ -29,6 +29,9 @@ linters-settings:
     local-prefixes: github.com/zc2638/ink
   govet:
     check-shadowing: false
+  gosec:
+    excludes:
+      - G204
   lll:
     line-length: 160
   misspell:

@@ -72,7 +72,7 @@ func handleAccept() http.HandlerFunc {
 		workerName := query.Get("name")
 		db := database.FromRequest(r)
 
-		stageS := new(storageV1.StageStatus)
+		stageS := new(storageV1.Stage)
 		stageS.SetID(stageID)
 		if err := db.Where(stageS).First(stageS).Error; err != nil {
 			wrapper.InternalError(w, err)
@@ -101,7 +101,7 @@ func handleInfo() http.HandlerFunc {
 			wrapper.URLParam(r, "stage"), 10, 64)
 		db := database.FromRequest(r)
 
-		statusS := new(storageV1.StageStatus)
+		statusS := new(storageV1.Stage)
 		statusS.SetID(stageID)
 		if err := db.Where(statusS).First(statusS).Error; err != nil {
 			wrapper.InternalError(w, err)
@@ -113,8 +113,8 @@ func handleInfo() http.HandlerFunc {
 			return
 		}
 
-		var stepList []storageV1.StepStatus
-		if err := db.Where(&storageV1.StepStatus{StageID: status.ID}).Find(&stepList).Error; err != nil {
+		var stepList []storageV1.Step
+		if err := db.Where(&storageV1.Step{StageID: status.ID}).Find(&stepList).Error; err != nil {
 			wrapper.InternalError(w, err)
 			return
 		}
@@ -130,8 +130,8 @@ func handleInfo() http.HandlerFunc {
 		}
 		build := buildS.ToAPI()
 
-		var stageList []storageV1.StageStatus
-		if err := db.Where(&storageV1.StageStatus{BuildID: build.ID}).Find(&stageList).Error; err != nil {
+		var stageList []storageV1.Stage
+		if err := db.Where(&storageV1.Stage{BuildID: build.ID}).Find(&stageList).Error; err != nil {
 			wrapper.InternalError(w, err)
 			return
 		}
@@ -156,7 +156,7 @@ func handleInfo() http.HandlerFunc {
 			return
 		}
 
-		stageS := &storageV1.Stage{Namespace: box.GetNamespace(), Name: status.Name}
+		stageS := &storageV1.Workflow{Namespace: box.GetNamespace(), Name: status.Name}
 		if err := db.Where(stageS).First(stageS).Error; err != nil {
 			wrapper.InternalError(w, err)
 			return
@@ -170,10 +170,10 @@ func handleInfo() http.HandlerFunc {
 		// TODO 获取 secret 配置
 
 		data := &v1.Data{
-			Box:    box,
-			Build:  build,
-			Stage:  stage,
-			Status: status,
+			Box:      box,
+			Build:    build,
+			Workflow: stage,
+			Status:   status,
 		}
 		ctr.OK(w, data)
 	}
@@ -183,7 +183,7 @@ func handleInfo() http.HandlerFunc {
 // that processes a `http.Request` to update the stage status.
 func handleStageBegin() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stage := new(v1.StageStatus)
+		stage := new(v1.Stage)
 		err := json.NewDecoder(r.Body).Decode(&stage)
 		if err != nil {
 			wrapper.BadRequest(w, err)
@@ -205,7 +205,7 @@ func handleStageBegin() http.HandlerFunc {
 		if len(stage.Error) > 500 {
 			stage.Error = stage.Error[:500]
 		}
-		stageS := new(storageV1.StageStatus)
+		stageS := new(storageV1.Stage)
 		if err := stageS.FromAPI(stage); err != nil {
 			wrapper.InternalError(w, err)
 			return
@@ -236,7 +236,7 @@ func handleStageBegin() http.HandlerFunc {
 // that processes a `http.Request` to update the stage status.
 func handleStageEnd() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stage := new(v1.StageStatus)
+		stage := new(v1.Stage)
 		err := json.NewDecoder(r.Body).Decode(&stage)
 		if err != nil {
 			wrapper.BadRequest(w, err)
@@ -262,14 +262,14 @@ func handleStageEnd() http.HandlerFunc {
 		if len(stage.Error) > 500 {
 			stage.Error = stage.Error[:500]
 		}
-		stageS := new(storageV1.StageStatus)
+		stageS := new(storageV1.Stage)
 		if err := stageS.FromAPI(stage); err != nil {
 			wrapper.InternalError(w, err)
 			return
 		}
 
 		err = db.Transaction(func(tx *gorm.DB) error {
-			stageWhere := new(storageV1.StageStatus)
+			stageWhere := new(storageV1.Stage)
 			stageWhere.SetID(stageS.ID)
 			if err := tx.Model(stageWhere).Where(stageWhere).Updates(stageS).Error; err != nil {
 				return err
@@ -280,9 +280,9 @@ func handleStageEnd() http.HandlerFunc {
 					step.Error = step.Error[:500]
 				}
 
-				stepS := new(storageV1.StepStatus)
+				stepS := new(storageV1.Step)
 				stepS.FromAPI(step)
-				stepWhere := new(storageV1.StepStatus)
+				stepWhere := new(storageV1.Step)
 				stepWhere.SetID(stepS.ID)
 				if err := tx.Model(stepWhere).Where(stepWhere).Updates(stepS).Error; err != nil {
 					return err
@@ -300,12 +300,12 @@ func handleStageEnd() http.HandlerFunc {
 			_ = ll.Delete(ctx, strconv.FormatUint(step.ID, 10))
 		}
 
-		var stageList []storageV1.StageStatus
-		if err := db.Where(&storageV1.StageStatus{BuildID: buildS.ID}).Find(&stageList).Error; err != nil {
+		var stageList []storageV1.Stage
+		if err := db.Where(&storageV1.Stage{BuildID: buildS.ID}).Find(&stageList).Error; err != nil {
 			wrapper.InternalError(w, err)
 			return
 		}
-		stages := make([]*v1.StageStatus, 0, len(stageList))
+		stages := make([]*v1.Stage, 0, len(stageList))
 		for _, v := range stageList {
 			item, err := v.ToAPI()
 			if err != nil {
@@ -363,7 +363,7 @@ func handleStageEnd() http.HandlerFunc {
 // that processes a `http.Request` to update the step status.
 func handleStepBegin() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		step := new(v1.StepStatus)
+		step := new(v1.Step)
 		err := json.NewDecoder(r.Body).Decode(&step)
 		if err != nil {
 			wrapper.BadRequest(w, err)
@@ -386,9 +386,9 @@ func handleStepBegin() http.HandlerFunc {
 			step.Error = step.Error[:500]
 		}
 
-		stepS := new(storageV1.StepStatus)
+		stepS := new(storageV1.Step)
 		stepS.FromAPI(step)
-		stepWhere := new(storageV1.StepStatus)
+		stepWhere := new(storageV1.Step)
 		stepWhere.SetID(step.ID)
 		if err := db.Model(stepWhere).Where(stepWhere).Updates(stepS).Error; err != nil {
 			wrapper.InternalError(w, err)
@@ -402,7 +402,7 @@ func handleStepBegin() http.HandlerFunc {
 // that processes a `http.Request` to update the step status.
 func handleStepEnd() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		step := new(v1.StepStatus)
+		step := new(v1.Step)
 		err := json.NewDecoder(r.Body).Decode(&step)
 		if err != nil {
 			wrapper.BadRequest(w, err)
@@ -420,9 +420,9 @@ func handleStepEnd() http.HandlerFunc {
 		if len(step.Error) > 500 {
 			step.Error = step.Error[:500]
 		}
-		stepS := new(storageV1.StepStatus)
+		stepS := new(storageV1.Step)
 		stepS.FromAPI(step)
-		stepWhere := new(storageV1.StepStatus)
+		stepWhere := new(storageV1.Step)
 		stepWhere.SetID(step.ID)
 		if err := db.Model(stepWhere).Where(stepWhere).Updates(stepS).Error; err != nil {
 			wrapper.InternalError(w, err)
@@ -505,7 +505,7 @@ func handleWatchCancel(w http.ResponseWriter, r *http.Request) {
 	ctr.Success(w)
 }
 
-func cancelDownstream(db *gorm.DB, stages []*v1.StageStatus) error {
+func cancelDownstream(db *gorm.DB, stages []*v1.Stage) error {
 	failed := false
 	for _, s := range stages {
 		if s.Phase.IsFailed() {
@@ -538,12 +538,12 @@ func cancelDownstream(db *gorm.DB, stages []*v1.StageStatus) error {
 		s.Started = time.Now().Unix()
 		s.Stopped = time.Now().Unix()
 
-		stageS := new(storageV1.StageStatus)
+		stageS := new(storageV1.Stage)
 		if err := stageS.FromAPI(s); err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		stageWhere := new(storageV1.StageStatus)
+		stageWhere := new(storageV1.Stage)
 		stageWhere.SetID(s.ID)
 		if err := db.Model(stageWhere).Where(stageWhere).Updates(stageS).Error; err != nil {
 			errs = append(errs, err)
@@ -552,7 +552,7 @@ func cancelDownstream(db *gorm.DB, stages []*v1.StageStatus) error {
 	return errors.Join(errs...)
 }
 
-func areDepsComplete(stage *v1.StageStatus, stages []*v1.StageStatus) bool {
+func areDepsComplete(stage *v1.Stage, stages []*v1.Stage) bool {
 	deps := sets.NewString(stage.DependsOn...)
 	for _, sv := range stages {
 		if !deps.Has(sv.Name) {
@@ -565,7 +565,7 @@ func areDepsComplete(stage *v1.StageStatus, stages []*v1.StageStatus) bool {
 	return true
 }
 
-func scheduleDownstream(ctx context.Context, sched scheduler.Interface, db *gorm.DB, stages []*v1.StageStatus) error {
+func scheduleDownstream(ctx context.Context, sched scheduler.Interface, db *gorm.DB, stages []*v1.Stage) error {
 	var errs []error
 	for _, sv := range stages {
 		if sv.Phase != v1.PhaseWaiting {
@@ -580,12 +580,12 @@ func scheduleDownstream(ctx context.Context, sched scheduler.Interface, db *gorm
 
 		sv.Phase = v1.PhasePending
 
-		stageS := new(storageV1.StageStatus)
+		stageS := new(storageV1.Stage)
 		if err := stageS.FromAPI(sv); err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		stageWhere := new(storageV1.StageStatus)
+		stageWhere := new(storageV1.Stage)
 		stageWhere.SetID(sv.ID)
 		if err := db.Model(stageWhere).Where(stageWhere).Updates(stageS).Error; err != nil {
 			errs = append(errs, err)

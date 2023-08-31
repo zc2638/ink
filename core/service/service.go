@@ -21,11 +21,11 @@ import (
 )
 
 type (
-	Stage interface {
-		List(ctx context.Context, page *v1.Pagination) ([]*v1.Stage, error)
-		Info(ctx context.Context, namespace, name string) (*v1.Stage, error)
-		Create(ctx context.Context, data *v1.Stage) error
-		Update(ctx context.Context, data *v1.Stage) error
+	Workflow interface {
+		List(ctx context.Context, page *v1.Pagination) ([]*v1.Workflow, error)
+		Info(ctx context.Context, namespace, name string) (*v1.Workflow, error)
+		Create(ctx context.Context, data *v1.Workflow) error
+		Update(ctx context.Context, data *v1.Workflow) error
 		Delete(ctx context.Context, namespace, name string) error
 	}
 

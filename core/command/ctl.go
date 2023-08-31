@@ -43,10 +43,10 @@ func NewCtl() *cobra.Command {
 		flags.New("file", flags.NewStringValue(getEnv("file")), ""),
 	)
 
-	stageCmd := &cobra.Command{Use: "stage"}
-	Register(stageCmd, "get", stageGet)
-	Register(stageCmd, "list", stageList)
-	Register(stageCmd, "delete", stageDelete)
+	workflowCmd := &cobra.Command{Use: "workflow"}
+	Register(workflowCmd, "get", workflowGet)
+	Register(workflowCmd, "list", workflowList)
+	Register(workflowCmd, "delete", workflowDelete)
 
 	boxCmd := &cobra.Command{Use: "box"}
 	Register(boxCmd, "get", boxGet)
@@ -59,7 +59,7 @@ func NewCtl() *cobra.Command {
 	Register(buildCmd, "list", buildList)
 	Register(buildCmd, "cancel", buildCancel)
 
-	cmd.AddCommand(stageCmd, boxCmd, buildCmd)
+	cmd.AddCommand(workflowCmd, boxCmd, buildCmd)
 	return cmd
 }
 
@@ -105,18 +105,18 @@ func apply(cmd *cobra.Command, _ []string) error {
 	ctx := context.Background()
 
 	// TODO kind Secret
-	for _, obj := range objSet[v1.KindStage] {
-		var data v1.Stage
+	for _, obj := range objSet[v1.KindWorkflow] {
+		var data v1.Workflow
 		if err := obj.ToObject(&data); err != nil {
 			return err
 		}
-		_, err := sc.StageInfo(ctx, data.GetNamespace(), data.GetName())
+		_, err := sc.WorkflowInfo(ctx, data.GetNamespace(), data.GetName())
 		if err == nil {
-			if err = sc.StageUpdate(ctx, &data); err == nil {
+			if err = sc.WorkflowUpdate(ctx, &data); err == nil {
 				writeString(fmt.Sprintf("Update: %s", data.Metadata.String()))
 			}
 		} else if errors.Is(err, constant.ErrNoRecord) {
-			if err = sc.StageCreate(ctx, &data); err == nil {
+			if err = sc.WorkflowCreate(ctx, &data); err == nil {
 				writeString(fmt.Sprintf("Create: %s", data.Metadata.String()))
 			}
 		}
@@ -147,7 +147,7 @@ func apply(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func stageGet(cmd *cobra.Command, args []string) error {
+func workflowGet(cmd *cobra.Command, args []string) error {
 	namespace, name, err := getNN(args)
 	if err != nil {
 		return err
@@ -157,7 +157,7 @@ func stageGet(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	result, err := sc.StageInfo(context.Background(), namespace, name)
+	result, err := sc.WorkflowInfo(context.Background(), namespace, name)
 	if err != nil {
 		return err
 	}
@@ -169,12 +169,12 @@ func stageGet(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func stageList(cmd *cobra.Command, args []string) error {
+func workflowList(cmd *cobra.Command, _ []string) error {
 	sc, err := newServerClient(cmd)
 	if err != nil {
 		return err
 	}
-	result, _, err := sc.StageList(context.Background(), *getPage(cmd))
+	result, _, err := sc.WorkflowList(context.Background(), *getPage(cmd))
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func stageList(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func stageDelete(cmd *cobra.Command, args []string) error {
+func workflowDelete(cmd *cobra.Command, args []string) error {
 	namespace, name, err := getNN(args)
 	if err != nil {
 		return err
@@ -203,7 +203,7 @@ func stageDelete(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	return sc.StageDelete(context.Background(), namespace, name)
+	return sc.WorkflowDelete(context.Background(), namespace, name)
 }
 
 func boxGet(cmd *cobra.Command, args []string) error {
@@ -228,7 +228,7 @@ func boxGet(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func boxList(cmd *cobra.Command, args []string) error {
+func boxList(cmd *cobra.Command, _ []string) error {
 	sc, err := newServerClient(cmd)
 	if err != nil {
 		return err

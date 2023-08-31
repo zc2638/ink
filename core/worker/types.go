@@ -31,7 +31,7 @@ type State struct {
 	OOMKilled bool
 }
 
-type Stage struct {
+type Workflow struct {
 	ID        string
 	Name      string
 	Namespace string
@@ -45,7 +45,7 @@ type Stage struct {
 	Worker      *v1.Worker
 }
 
-func (s *Stage) GetStep(name string) *Step {
+func (s *Workflow) GetStep(name string) *Step {
 	for _, v := range s.Steps {
 		if v.Name == name {
 			return v
@@ -115,8 +115,8 @@ func completeID(id string) string {
 	return constant.Name + "-" + id
 }
 
-func Convert(in *v1.Stage, status *v1.StageStatus, secrets []*v1.Secret) (*Stage, error) {
-	out := &Stage{
+func Convert(in *v1.Workflow, status *v1.Stage, secrets []*v1.Secret) (*Workflow, error) {
+	out := &Workflow{
 		ID:          completeID(strconv.FormatUint(status.ID, 10)),
 		Name:        in.Name,
 		Namespace:   in.Namespace,
@@ -183,28 +183,28 @@ func Convert(in *v1.Stage, status *v1.StageStatus, secrets []*v1.Secret) (*Stage
 	return out, nil
 }
 
-func Compile(stage *Stage) {
-	if len(stage.WorkingDir) == 0 {
-		stage.WorkingDir = constant.WorkspacePath
-	} else if !filepath.IsAbs(stage.WorkingDir) {
-		stage.WorkingDir = filepath.Join(constant.WorkspacePath, stage.WorkingDir)
+func Compile(spec *Workflow) {
+	if len(spec.WorkingDir) == 0 {
+		spec.WorkingDir = constant.WorkspacePath
+	} else if !filepath.IsAbs(spec.WorkingDir) {
+		spec.WorkingDir = filepath.Join(constant.WorkspacePath, spec.WorkingDir)
 	}
 
-	if IsRestrictedVolume(stage.WorkingDir) {
-		stage.WorkingDir = constant.WorkspacePath
+	if IsRestrictedVolume(spec.WorkingDir) {
+		spec.WorkingDir = constant.WorkspacePath
 	}
 
 	// add the workspace volume
 	volume := Volume{
-		ID: stage.ID,
+		ID: spec.ID,
 		Volume: v1.Volume{
 			Name:     "_ink_volume",
 			EmptyDir: &v1.EmptyDirVolume{},
 		},
 	}
-	stage.Volumes = append([]Volume{volume}, stage.Volumes...)
+	spec.Volumes = append([]Volume{volume}, spec.Volumes...)
 
-	for _, s := range stage.Steps {
+	for _, s := range spec.Steps {
 		switch s.ImagePullPolicy {
 		case v1.PullAlways, v1.PullNever, v1.PullIfNotPresent:
 		default:
@@ -212,7 +212,7 @@ func Compile(stage *Stage) {
 		}
 
 		if s.WorkingDir == "" {
-			s.WorkingDir = stage.WorkingDir
+			s.WorkingDir = spec.WorkingDir
 		}
 		vm := v1.VolumeMount{
 			Name: volume.Name,

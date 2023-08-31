@@ -47,8 +47,8 @@ func (c *clientDirect) Request(ctx context.Context) (*v1.Stage, error) {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	case data := <-c.dataCh:
-		c.ds[data.Stage.ID] = data
-		return data.Stage, nil
+		c.ds[data.Workflow.ID] = data
+		return data.Status, nil
 	}
 }
 
@@ -67,19 +67,19 @@ func (c *clientDirect) Info(_ context.Context, stageID uint64) (*v1.Data, error)
 	return data, nil
 }
 
-func (c *clientDirect) StageBegin(_ context.Context, stage *v1.StageStatus) error {
+func (c *clientDirect) StageBegin(_ context.Context, stage *v1.Stage) error {
 	return nil
 }
 
-func (c *clientDirect) StageEnd(_ context.Context, stage *v1.StageStatus) error {
+func (c *clientDirect) StageEnd(_ context.Context, stage *v1.Stage) error {
 	return nil
 }
 
-func (c *clientDirect) StepBegin(_ context.Context, step *v1.StepStatus) error {
+func (c *clientDirect) StepBegin(_ context.Context, step *v1.Step) error {
 	return nil
 }
 
-func (c *clientDirect) StepEnd(_ context.Context, step *v1.StepStatus) error {
+func (c *clientDirect) StepEnd(_ context.Context, step *v1.Step) error {
 	return nil
 }
 

@@ -21,14 +21,14 @@ import (
 
 	"github.com/zc2638/ink/core/service/box"
 	"github.com/zc2638/ink/core/service/build"
-	"github.com/zc2638/ink/core/service/stage"
+	"github.com/zc2638/ink/core/service/workflow"
 )
 
 func Handler(middlewares chi.Middlewares) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middlewares...)
 
-	stageSrv := stage.New()
+	workflowSrv := workflow.New()
 	boxSrv := box.New()
 	buildSrv := build.New()
 
@@ -55,13 +55,13 @@ func Handler(middlewares chi.Middlewares) http.Handler {
 		})
 	})
 
-	r.Route("/stage", func(r chi.Router) {
-		r.Get("/", stageList(stageSrv))
-		r.Post("/", stageCreate(stageSrv))
+	r.Route("/workflow", func(r chi.Router) {
+		r.Get("/", workflowList(workflowSrv))
+		r.Post("/", workflowCreate(workflowSrv))
 		r.Route("/{namespace}/{name}", func(r chi.Router) {
-			r.Get("/", stageInfo(stageSrv))
-			r.Put("/", stageUpdate(stageSrv))
-			r.Delete("/", stageDelete(stageSrv))
+			r.Get("/", workflowInfo(workflowSrv))
+			r.Put("/", workflowUpdate(workflowSrv))
+			r.Delete("/", workflowDelete(workflowSrv))
 		})
 	})
 	return r

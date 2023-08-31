@@ -24,10 +24,10 @@ type Build struct {
 	Started int64  `json:"started,omitempty" yaml:"started,omitempty"`
 	Stopped int64  `json:"stopped,omitempty" yaml:"stopped,omitempty"`
 
-	Stages []*StageStatus `json:"stages,omitempty" yaml:"stages,omitempty"`
+	Stages []*Stage `json:"stages,omitempty" yaml:"stages,omitempty"`
 }
 
-type StageStatus struct {
+type Stage struct {
 	ID      uint64 `json:"id" yaml:"id"`
 	BoxID   uint64 `json:"boxID" yaml:"boxID"`
 	BuildID uint64 `json:"buildID" yaml:"buildID"`
@@ -43,10 +43,10 @@ type StageStatus struct {
 	Worker     Worker   `json:"worker,omitempty" yaml:"worker,omitempty"`
 	DependsOn  []string `json:"dependsOn,omitempty" yaml:"dependsOn,omitempty"`
 
-	Steps []*StepStatus `json:"steps,omitempty" yaml:"steps,omitempty"`
+	Steps []*Step `json:"steps,omitempty" yaml:"steps,omitempty"`
 }
 
-type StepStatus struct {
+type Step struct {
 	ID       uint64 `json:"id" yaml:"id"`
 	StageID  uint64 `json:"stageID" yaml:"stageID"`
 	Number   uint64 `json:"number" yaml:"number"`

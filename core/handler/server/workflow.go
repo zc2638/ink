@@ -25,10 +25,10 @@ import (
 	v1 "github.com/zc2638/ink/pkg/api/core/v1"
 )
 
-func stageList(stageSrv service.Stage) http.HandlerFunc {
+func workflowList(workflowSrv service.Workflow) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		page := v1.GetPagination(r)
-		result, err := stageSrv.List(r.Context(), page)
+		result, err := workflowSrv.List(r.Context(), page)
 		if err != nil {
 			wrapper.InternalError(w, err)
 			return
@@ -37,12 +37,12 @@ func stageList(stageSrv service.Stage) http.HandlerFunc {
 	}
 }
 
-func stageInfo(stageSrv service.Stage) http.HandlerFunc {
+func workflowInfo(workflowSrv service.Workflow) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		namespace := wrapper.URLParam(r, "namespace")
 		name := wrapper.URLParam(r, "name")
 
-		result, err := stageSrv.Info(r.Context(), namespace, name)
+		result, err := workflowSrv.Info(r.Context(), namespace, name)
 		if err != nil {
 			wrapper.InternalError(w, err)
 			return
@@ -51,15 +51,15 @@ func stageInfo(stageSrv service.Stage) http.HandlerFunc {
 	}
 }
 
-func stageCreate(stageSrv service.Stage) http.HandlerFunc {
+func workflowCreate(workflowSrv service.Workflow) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var in v1.Stage
+		var in v1.Workflow
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 			wrapper.BadRequest(w, err)
 			return
 		}
 
-		if err := stageSrv.Create(r.Context(), &in); err != nil {
+		if err := workflowSrv.Create(r.Context(), &in); err != nil {
 			wrapper.InternalError(w, err)
 			return
 		}
@@ -67,12 +67,12 @@ func stageCreate(stageSrv service.Stage) http.HandlerFunc {
 	}
 }
 
-func stageUpdate(stageSrv service.Stage) http.HandlerFunc {
+func workflowUpdate(workflowSrv service.Workflow) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		namespace := wrapper.URLParam(r, "namespace")
 		name := wrapper.URLParam(r, "name")
 
-		var in v1.Stage
+		var in v1.Workflow
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 			wrapper.BadRequest(w, err)
 			return
@@ -80,7 +80,7 @@ func stageUpdate(stageSrv service.Stage) http.HandlerFunc {
 		in.SetNamespace(namespace)
 		in.SetName(name)
 
-		if err := stageSrv.Update(r.Context(), &in); err != nil {
+		if err := workflowSrv.Update(r.Context(), &in); err != nil {
 			wrapper.InternalError(w, err)
 			return
 		}
@@ -88,12 +88,12 @@ func stageUpdate(stageSrv service.Stage) http.HandlerFunc {
 	}
 }
 
-func stageDelete(stageSrv service.Stage) http.HandlerFunc {
+func workflowDelete(workflowSrv service.Workflow) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		namespace := wrapper.URLParam(r, "namespace")
 		name := wrapper.URLParam(r, "name")
 
-		if err := stageSrv.Delete(r.Context(), namespace, name); err != nil {
+		if err := workflowSrv.Delete(r.Context(), namespace, name); err != nil {
 			wrapper.InternalError(w, err)
 			return
 		}

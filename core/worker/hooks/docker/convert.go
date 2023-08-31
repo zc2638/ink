@@ -18,17 +18,16 @@ import (
 	"os"
 	"strings"
 
-	v1 "github.com/zc2638/ink/pkg/api/core/v1"
-
-	"github.com/zc2638/ink/core/worker"
-	"github.com/zc2638/ink/pkg/shell"
-
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
+
+	"github.com/zc2638/ink/core/worker"
+	v1 "github.com/zc2638/ink/pkg/api/core/v1"
+	"github.com/zc2638/ink/pkg/shell"
 )
 
-func toContainerConfig(stage *worker.Stage, step *worker.Step) *container.Config {
+func toContainerConfig(spec *worker.Workflow, step *worker.Step) *container.Config {
 	env := step.CombineEnv(map[string]string{
 		"INK_SCRIPT": shell.Script(step.Command),
 	})
@@ -63,12 +62,12 @@ func toContainerConfig(stage *worker.Stage, step *worker.Step) *container.Config
 		cfg.Env = append(cfg.Env, sec.Name+"="+sec.Data)
 	}
 	if len(step.VolumeMounts) != 0 {
-		cfg.Volumes = toVolumeSet(stage, step)
+		cfg.Volumes = toVolumeSet(spec, step)
 	}
 	return cfg
 }
 
-func toHostConfig(stage *worker.Stage, step *worker.Step) *container.HostConfig {
+func toHostConfig(spec *worker.Workflow, step *worker.Step) *container.HostConfig {
 	config := &container.HostConfig{
 		Privileged: step.Privileged,
 		LogConfig: container.LogConfig{
@@ -77,7 +76,7 @@ func toHostConfig(stage *worker.Stage, step *worker.Step) *container.HostConfig 
 	}
 	// windows do not support privileged, so we hard-code
 	// this value to false.
-	if stage.Worker != nil && stage.Worker.Platform.OS == "windows" {
+	if spec.Worker != nil && spec.Worker.Platform.OS == "windows" {
 		config.Privileged = false
 	}
 	if len(step.Network) > 0 {
@@ -98,22 +97,22 @@ func toHostConfig(stage *worker.Stage, step *worker.Step) *container.HostConfig 
 	}
 
 	if len(step.VolumeMounts) > 0 {
-		config.Devices = toDeviceSlice(stage, step)
-		config.Binds = toVolumeSlice(stage, step)
-		config.Mounts = toVolumeMounts(stage, step)
+		config.Devices = toDeviceSlice(spec, step)
+		config.Binds = toVolumeSlice(spec, step)
+		config.Mounts = toVolumeMounts(spec, step)
 	}
 	return config
 }
 
-func toNetConfig(stage *worker.Stage, step *worker.Step) *network.NetworkingConfig {
+func toNetConfig(spec *worker.Workflow, step *worker.Step) *network.NetworkingConfig {
 	// if the user overrides the default network,
 	// we do not attach to the user-defined network.
 	if step.Network != "" {
 		return &network.NetworkingConfig{}
 	}
 	endpoints := map[string]*network.EndpointSettings{}
-	endpoints[stage.ID] = &network.EndpointSettings{
-		NetworkID: stage.ID,
+	endpoints[spec.ID] = &network.EndpointSettings{
+		NetworkID: spec.ID,
 		Aliases:   []string{step.Name},
 	}
 	return &network.NetworkingConfig{
@@ -122,10 +121,10 @@ func toNetConfig(stage *worker.Stage, step *worker.Step) *network.NetworkingConf
 }
 
 // toDeviceSlice converts a slice of device paths to a slice of container.DeviceMapping.
-func toDeviceSlice(stage *worker.Stage, step *worker.Step) []container.DeviceMapping {
+func toDeviceSlice(spec *worker.Workflow, step *worker.Step) []container.DeviceMapping {
 	var to []container.DeviceMapping
 	for _, vm := range step.Devices {
-		device, ok := lookupVolume(stage, vm.Name)
+		device, ok := lookupVolume(spec, vm.Name)
 		if !ok {
 			continue
 		}
@@ -146,10 +145,10 @@ func toDeviceSlice(stage *worker.Stage, step *worker.Step) []container.DeviceMap
 
 // helper function that converts a slice of volume paths to a set
 // of unique volume names.
-func toVolumeSet(stage *worker.Stage, step *worker.Step) map[string]struct{} {
+func toVolumeSet(spec *worker.Workflow, step *worker.Step) map[string]struct{} {
 	set := map[string]struct{}{}
 	for _, vm := range step.VolumeMounts {
-		volume, ok := lookupVolume(stage, vm.Name)
+		volume, ok := lookupVolume(spec, vm.Name)
 		if !ok {
 			continue
 		}
@@ -168,12 +167,12 @@ func toVolumeSet(stage *worker.Stage, step *worker.Step) map[string]struct{} {
 }
 
 // toVolumeSlice returns a slice of volume mounts.
-func toVolumeSlice(stage *worker.Stage, step *worker.Step) []string {
+func toVolumeSlice(spec *worker.Workflow, step *worker.Step) []string {
 	// this entire function should be deprecated in favor of toVolumeMounts.
 	// however, I am unable to get it working with data volumes.
 	var to []string
 	for _, vm := range step.VolumeMounts {
-		volume, ok := lookupVolume(stage, vm.Name)
+		volume, ok := lookupVolume(spec, vm.Name)
 		if !ok {
 			continue
 		}
@@ -193,10 +192,11 @@ func toVolumeSlice(stage *worker.Stage, step *worker.Step) []string {
 }
 
 // toVolumeMounts returns a slice of docker mount configurations.
-func toVolumeMounts(stage *worker.Stage, step *worker.Step) []mount.Mount {
+func toVolumeMounts(spec *worker.Workflow, step *worker.Step) []mount.Mount {
 	var mounts []mount.Mount
 	for _, vm := range step.VolumeMounts {
-		source, ok := lookupVolume(stage, vm.Name)
+		vmc := vm
+		source, ok := lookupVolume(spec, vmc.Name)
 		if !ok {
 			continue
 		}
@@ -206,7 +206,7 @@ func toVolumeMounts(stage *worker.Stage, step *worker.Step) []mount.Mount {
 		if isDataVolume(source) {
 			continue
 		}
-		mounts = append(mounts, toMount(source, &vm))
+		mounts = append(mounts, toMount(source, &vmc))
 	}
 	if len(mounts) == 0 {
 		return nil
@@ -281,8 +281,8 @@ func isNamedPipe(volume *worker.Volume) bool {
 }
 
 // lookupVolume returns the named volume.
-func lookupVolume(stage *worker.Stage, name string) (*worker.Volume, bool) {
-	for _, v := range stage.Volumes {
+func lookupVolume(spec *worker.Workflow, name string) (*worker.Volume, bool) {
+	for _, v := range spec.Volumes {
 		if v.HostPath != nil && v.Name == name {
 			return &v, true
 		}

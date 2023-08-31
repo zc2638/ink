@@ -35,7 +35,7 @@ func (m *Model) GetID() uint64 {
 	return m.ID
 }
 
-type Stage struct {
+type Workflow struct {
 	Model
 
 	Namespace string
@@ -43,11 +43,11 @@ type Stage struct {
 	Data      string
 }
 
-func (s *Stage) TableName() string {
-	return "stages"
+func (s *Workflow) TableName() string {
+	return "workflows"
 }
 
-func (s *Stage) FromAPI(in *v1.Stage) error {
+func (s *Workflow) FromAPI(in *v1.Workflow) error {
 	s.Namespace = in.GetNamespace()
 	s.Name = in.GetName()
 	b, err := json.Marshal(in)
@@ -58,8 +58,8 @@ func (s *Stage) FromAPI(in *v1.Stage) error {
 	return nil
 }
 
-func (s *Stage) ToAPI() (*v1.Stage, error) {
-	var out v1.Stage
+func (s *Workflow) ToAPI() (*v1.Workflow, error) {
+	var out v1.Workflow
 	if err := json.Unmarshal([]byte(s.Data), &out); err != nil {
 		return nil, err
 	}
@@ -159,7 +159,7 @@ func (s *Build) ToAPI() *v1.Build {
 	}
 }
 
-type StageStatus struct {
+type Stage struct {
 	Model
 
 	BoxID      uint64
@@ -174,11 +174,11 @@ type StageStatus struct {
 	Error      string
 }
 
-func (s *StageStatus) TableName() string {
-	return "stage_statuses"
+func (s *Stage) TableName() string {
+	return "stages"
 }
 
-func (s *StageStatus) FromAPI(in *v1.StageStatus) error {
+func (s *Stage) FromAPI(in *v1.Stage) error {
 	b, err := json.Marshal(in.Worker)
 	if err != nil {
 		return err
@@ -197,8 +197,8 @@ func (s *StageStatus) FromAPI(in *v1.StageStatus) error {
 	return nil
 }
 
-func (s *StageStatus) ToAPI() (*v1.StageStatus, error) {
-	result := &v1.StageStatus{
+func (s *Stage) ToAPI() (*v1.Stage, error) {
+	result := &v1.Stage{
 		ID:      s.ID,
 		BoxID:   s.BoxID,
 		BuildID: s.BuildID,
@@ -215,7 +215,7 @@ func (s *StageStatus) ToAPI() (*v1.StageStatus, error) {
 	return result, nil
 }
 
-type StepStatus struct {
+type Step struct {
 	Model
 
 	StageID  uint64
@@ -228,11 +228,11 @@ type StepStatus struct {
 	Error    string
 }
 
-func (s *StepStatus) TableName() string {
-	return "step_statuses"
+func (s *Step) TableName() string {
+	return "steps"
 }
 
-func (s *StepStatus) FromAPI(in *v1.StepStatus) {
+func (s *Step) FromAPI(in *v1.Step) {
 	s.ID = in.ID
 	s.StageID = in.StageID
 	s.Number = in.Number
@@ -244,8 +244,8 @@ func (s *StepStatus) FromAPI(in *v1.StepStatus) {
 	s.Error = in.Error
 }
 
-func (s *StepStatus) ToAPI() *v1.StepStatus {
-	return &v1.StepStatus{
+func (s *Step) ToAPI() *v1.Step {
+	return &v1.Step{
 		ID:       s.ID,
 		StageID:  s.StageID,
 		Number:   s.Number,

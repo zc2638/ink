@@ -25,31 +25,34 @@ import (
 )
 
 func validateResources(db *gorm.DB, box *v1.Box) error {
-	stages := make([]*v1.Stage, 0, len(box.Resources))
+	workflows := make([]*v1.Workflow, 0, len(box.Resources))
 	for _, rv := range box.Resources {
-		if rv.Kind != v1.KindStage {
+		if rv.Kind == "" {
+			rv.Kind = v1.KindWorkflow
+		}
+		if rv.Kind != v1.KindWorkflow {
 			continue
 		}
 
-		stageS := &storageV1.Stage{
+		sd := &storageV1.Workflow{
 			Namespace: box.GetNamespace(),
 			Name:      rv.Name,
 		}
-		if err := db.Where(stageS).First(stageS).Error; err != nil {
+		if err := db.Where(sd).First(sd).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return fmt.Errorf("stage not found: %s", stageS.Name)
+				return fmt.Errorf("workflow not found: %s", sd.Name)
 			}
 			return err
 		}
-		stage, err := stageS.ToAPI()
+		workflow, err := sd.ToAPI()
 		if err != nil {
 			return err
 		}
-		stages = append(stages, stage)
+		workflows = append(workflows, workflow)
 	}
 
-	if len(stages) == 0 {
-		return errors.New("resources did not find a stage")
+	if len(workflows) == 0 {
+		return errors.New("resources did not find a workflow")
 	}
-	return box.Validate(stages)
+	return box.Validate(workflows)
 }

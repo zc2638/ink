@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS `stages`
+CREATE TABLE IF NOT EXISTS `workflows`
 (
     `id`         INTEGER PRIMARY KEY AUTOINCREMENT,
     `namespace`  VARCHAR(255) NOT NULL,

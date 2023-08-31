@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stage
+package workflow
 
 import (
 	"context"
@@ -24,20 +24,20 @@ import (
 	"github.com/zc2638/ink/pkg/database"
 )
 
-func New() service.Stage {
+func New() service.Workflow {
 	return &srv{}
 }
 
 type srv struct{}
 
-func (s *srv) List(ctx context.Context, page *v1.Pagination) ([]*v1.Stage, error) {
+func (s *srv) List(ctx context.Context, page *v1.Pagination) ([]*v1.Workflow, error) {
 	db := database.FromContext(ctx)
 
 	var (
-		list  []storageV1.Stage
+		list  []storageV1.Workflow
 		total int64
 	)
-	if err := db.Model(&storageV1.Stage{}).Count(&total).Error; err != nil {
+	if err := db.Model(&storageV1.Workflow{}).Count(&total).Error; err != nil {
 		return nil, err
 	}
 	page.SetTotal(total)
@@ -46,7 +46,7 @@ func (s *srv) List(ctx context.Context, page *v1.Pagination) ([]*v1.Stage, error
 		return nil, err
 	}
 
-	result := make([]*v1.Stage, 0, len(list))
+	result := make([]*v1.Workflow, 0, len(list))
 	for _, v := range list {
 		item, err := v.ToAPI()
 		if err != nil {
@@ -57,64 +57,64 @@ func (s *srv) List(ctx context.Context, page *v1.Pagination) ([]*v1.Stage, error
 	return result, nil
 }
 
-func (s *srv) Info(ctx context.Context, namespace, name string) (*v1.Stage, error) {
+func (s *srv) Info(ctx context.Context, namespace, name string) (*v1.Workflow, error) {
 	db := database.FromContext(ctx)
 
-	stageS := &storageV1.Stage{Namespace: namespace, Name: name}
-	if err := db.Where(stageS).First(stageS).Error; err != nil {
+	sd := &storageV1.Workflow{Namespace: namespace, Name: name}
+	if err := db.Where(sd).First(sd).Error; err != nil {
 		return nil, err
 	}
-	return stageS.ToAPI()
+	return sd.ToAPI()
 }
 
-func (s *srv) Create(ctx context.Context, data *v1.Stage) error {
+func (s *srv) Create(ctx context.Context, data *v1.Workflow) error {
 	db := database.FromContext(ctx)
 
 	var count int64
-	stageS := &storageV1.Stage{Namespace: data.GetNamespace(), Name: data.GetName()}
-	if err := db.Where(stageS).Model(stageS).Count(&count).Error; err != nil {
+	sd := &storageV1.Workflow{Namespace: data.GetNamespace(), Name: data.GetName()}
+	if err := db.Where(sd).Model(sd).Count(&count).Error; err != nil {
 		return err
 	}
 	if count > 0 {
 		return constant.ErrAlreadyExists
 	}
 
-	if err := stageS.FromAPI(data); err != nil {
+	if err := sd.FromAPI(data); err != nil {
 		return err
 	}
-	return db.Create(stageS).Error
+	return db.Create(sd).Error
 }
 
-func (s *srv) Update(ctx context.Context, data *v1.Stage) error {
+func (s *srv) Update(ctx context.Context, data *v1.Workflow) error {
 	db := database.FromContext(ctx)
-	stageS := &storageV1.Stage{
+	sd := &storageV1.Workflow{
 		Namespace: data.GetNamespace(),
 		Name:      data.GetName(),
 	}
-	if err := db.Where(stageS).First(stageS).Error; err != nil {
+	if err := db.Where(sd).First(sd).Error; err != nil {
 		return err
 	}
-	if err := stageS.FromAPI(data); err != nil {
+	if err := sd.FromAPI(data); err != nil {
 		return err
 	}
 
-	where := &storageV1.Stage{
+	where := &storageV1.Workflow{
 		Namespace: data.GetNamespace(),
 		Name:      data.GetName(),
 	}
-	return db.Model(where).Where(where).Updates(stageS).Error
+	return db.Model(where).Where(where).Updates(sd).Error
 }
 
 func (s *srv) Delete(ctx context.Context, namespace, name string) error {
 	db := database.FromContext(ctx)
 
 	var count int64
-	stageS := &storageV1.Stage{Namespace: namespace, Name: name}
-	if err := db.Where(stageS).Model(stageS).Count(&count).Error; err != nil {
+	sd := &storageV1.Workflow{Namespace: namespace, Name: name}
+	if err := db.Where(sd).Model(sd).Count(&count).Error; err != nil {
 		return err
 	}
 	if count == 0 {
 		return constant.ErrNoRecord
 	}
-	return db.Where(stageS).Delete(stageS).Error
+	return db.Where(sd).Delete(sd).Error
 }

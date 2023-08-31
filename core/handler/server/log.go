@@ -53,12 +53,12 @@ func logInfo() http.HandlerFunc {
 			wrapper.InternalError(w, err)
 			return
 		}
-		stageS := &storageV1.StageStatus{BuildID: buildS.ID, Number: stageNumber}
+		stageS := &storageV1.Stage{BuildID: buildS.ID, Number: stageNumber}
 		if err := db.Where(stageS).First(stageS).Error; err != nil {
 			wrapper.InternalError(w, err)
 			return
 		}
-		stepS := &storageV1.StepStatus{StageID: stageS.ID, Number: stepNumber}
+		stepS := &storageV1.Step{StageID: stageS.ID, Number: stepNumber}
 		if err := db.Where(stepS).First(stepS).Error; err != nil {
 			wrapper.InternalError(w, err)
 			return
@@ -95,12 +95,12 @@ func logWatch() http.HandlerFunc {
 			wrapper.InternalError(w, err)
 			return
 		}
-		stageS := &storageV1.StageStatus{BuildID: buildS.ID, Number: stageNumber}
+		stageS := &storageV1.Stage{BuildID: buildS.ID, Number: stageNumber}
 		if err := db.Where(stageS).First(stageS).Error; err != nil {
 			wrapper.InternalError(w, err)
 			return
 		}
-		stepS := &storageV1.StepStatus{StageID: stageS.ID, Number: stepNumber}
+		stepS := &storageV1.Step{StageID: stageS.ID, Number: stepNumber}
 		if err := db.Where(stepS).First(stepS).Error; err != nil {
 			wrapper.InternalError(w, err)
 			return

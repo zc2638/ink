@@ -38,10 +38,10 @@ type ClientV1 interface {
 	Request(ctx context.Context) (*v1.Stage, error)
 	Accept(ctx context.Context, stageID uint64) error
 	Info(ctx context.Context, stageID uint64) (*v1.Data, error)
-	StageBegin(ctx context.Context, stage *v1.StageStatus) error
-	StageEnd(ctx context.Context, stage *v1.StageStatus) error
-	StepBegin(ctx context.Context, step *v1.StepStatus) error
-	StepEnd(ctx context.Context, step *v1.StepStatus) error
+	StageBegin(ctx context.Context, stage *v1.Stage) error
+	StageEnd(ctx context.Context, stage *v1.Stage) error
+	StepBegin(ctx context.Context, step *v1.Step) error
+	StepEnd(ctx context.Context, step *v1.Step) error
 	LogUpload(ctx context.Context, stepID uint64, lines []*livelog.Line) error
 	WatchCancel(ctx context.Context, buildID uint64) error
 }
@@ -142,7 +142,7 @@ func (c *clientV1) Info(ctx context.Context, stageID uint64) (*v1.Data, error) {
 	return &result, nil
 }
 
-func (c *clientV1) StageBegin(ctx context.Context, stage *v1.StageStatus) error {
+func (c *clientV1) StageBegin(ctx context.Context, stage *v1.Stage) error {
 	req := c.R(ctx).
 		SetBody(stage).
 		SetPathParam("stage", strconv.FormatUint(stage.ID, 10))
@@ -150,7 +150,7 @@ func (c *clientV1) StageBegin(ctx context.Context, stage *v1.StageStatus) error 
 	return handleClientError(resp, err)
 }
 
-func (c *clientV1) StageEnd(ctx context.Context, stage *v1.StageStatus) error {
+func (c *clientV1) StageEnd(ctx context.Context, stage *v1.Stage) error {
 	req := c.R(ctx).
 		SetBody(stage).
 		SetPathParam("stage", strconv.FormatUint(stage.ID, 10))
@@ -158,7 +158,7 @@ func (c *clientV1) StageEnd(ctx context.Context, stage *v1.StageStatus) error {
 	return handleClientError(resp, err)
 }
 
-func (c *clientV1) StepBegin(ctx context.Context, step *v1.StepStatus) error {
+func (c *clientV1) StepBegin(ctx context.Context, step *v1.Step) error {
 	req := c.R(ctx).
 		SetBody(step).
 		SetPathParam("step", strconv.FormatUint(step.ID, 10))
@@ -166,7 +166,7 @@ func (c *clientV1) StepBegin(ctx context.Context, step *v1.StepStatus) error {
 	return handleClientError(resp, err)
 }
 
-func (c *clientV1) StepEnd(ctx context.Context, step *v1.StepStatus) error {
+func (c *clientV1) StepEnd(ctx context.Context, step *v1.Step) error {
 	req := c.R(ctx).
 		SetBody(step).
 		SetPathParam("step", strconv.FormatUint(step.ID, 10))

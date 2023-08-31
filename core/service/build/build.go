@@ -88,8 +88,8 @@ func (s *srv) Info(ctx context.Context, namespace, name string, number uint64) (
 	}
 	build := buildS.ToAPI()
 
-	var stageList []storageV1.StageStatus
-	stageS := &storageV1.StageStatus{
+	var stageList []storageV1.Stage
+	stageS := &storageV1.Stage{
 		BoxID:   buildS.BoxID,
 		BuildID: buildS.ID,
 	}
@@ -102,8 +102,8 @@ func (s *srv) Info(ctx context.Context, namespace, name string, number uint64) (
 			return nil, err
 		}
 
-		var stepList []storageV1.StepStatus
-		stepS := &storageV1.StepStatus{StageID: v.ID}
+		var stepList []storageV1.Step
+		stepS := &storageV1.Step{StageID: v.ID}
 		if err := db.Where(stepS).Find(&stepList).Error; err != nil {
 			return nil, err
 		}
@@ -151,7 +151,7 @@ func (s *srv) Create(ctx context.Context, namespace, name string) (uint64, error
 		}
 
 		for k, v := range box.Resources {
-			stageS := &storageV1.Stage{
+			stageS := &storageV1.Workflow{
 				Namespace: box.Namespace,
 				Name:      v.Name,
 			}
@@ -165,7 +165,7 @@ func (s *srv) Create(ctx context.Context, namespace, name string) (uint64, error
 			if stage.Spec.Worker == nil {
 				stage.Spec.Worker = &v1.Worker{Kind: v1.WorkerKindDocker}
 			}
-			status := &v1.StageStatus{
+			status := &v1.Stage{
 				BoxID:     box.ID,
 				BuildID:   buildS.ID,
 				Number:    uint64(k) + 1,
@@ -175,7 +175,7 @@ func (s *srv) Create(ctx context.Context, namespace, name string) (uint64, error
 				Worker:    *stage.Spec.Worker,
 				DependsOn: stage.Spec.DependsOn,
 			}
-			var statusS storageV1.StageStatus
+			var statusS storageV1.Stage
 			if err := statusS.FromAPI(status); err != nil {
 				return err
 			}
@@ -184,13 +184,13 @@ func (s *srv) Create(ctx context.Context, namespace, name string) (uint64, error
 			}
 
 			for sk, sv := range stage.Spec.Steps {
-				step := &v1.StepStatus{
+				step := &v1.Step{
 					StageID: statusS.ID,
 					Number:  uint64(sk) + 1,
 					Phase:   v1.PhasePending,
 					Name:    sv.Name,
 				}
-				stepS := new(storageV1.StepStatus)
+				stepS := new(storageV1.Step)
 				stepS.FromAPI(step)
 				if err := tx.Create(stepS).Error; err != nil {
 					return err

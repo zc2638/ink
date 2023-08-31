@@ -70,12 +70,12 @@ func (h *docker) delState(id string) {
 	h.states.Delete(id)
 }
 
-func (h *docker) StageBegin(ctx context.Context, stage *worker.Stage) error {
+func (h *docker) Begin(ctx context.Context, spec *worker.Workflow) error {
 	state := newDockerState()
-	h.addState(stage.ID, state)
+	h.addState(spec.ID, state)
 
-	state.id = stage.ID
-	for _, v := range stage.Volumes {
+	state.id = spec.ID
+	for _, v := range spec.Volumes {
 		if v.EmptyDir == nil {
 			continue
 		}
@@ -91,17 +91,17 @@ func (h *docker) StageBegin(ctx context.Context, stage *worker.Stage) error {
 	}
 
 	driver := "bridge"
-	if stage.Worker != nil &&
-		stage.Worker.Platform != nil &&
-		stage.Worker.Platform.OS == "windows" {
+	if spec.Worker != nil &&
+		spec.Worker.Platform != nil &&
+		spec.Worker.Platform.OS == "windows" {
 		driver = "nat"
 	}
-	_, err := h.client.NetworkCreate(ctx, stage.ID, types.NetworkCreate{Driver: driver})
+	_, err := h.client.NetworkCreate(ctx, spec.ID, types.NetworkCreate{Driver: driver})
 	return trimExtraInfo(err)
 }
 
-func (h *docker) StageEnd(ctx context.Context, stage *worker.Stage) error {
-	state := h.getState(stage.ID)
+func (h *docker) End(ctx context.Context, spec *worker.Workflow) error {
+	state := h.getState(spec.ID)
 	if state == nil {
 		return errors.New("abnormal state")
 	}
@@ -146,14 +146,14 @@ func (h *docker) StageEnd(ctx context.Context, stage *worker.Stage) error {
 			"network", state.id,
 		)
 	}
-	h.delState(stage.ID)
+	h.delState(spec.ID)
 	return nil
 }
 
-func (h *docker) Step(ctx context.Context, stage *worker.Stage, step *worker.Step, writer io.Writer) (*worker.State, error) {
-	log := wslog.FromContext(ctx).With("stage", stage.Name, "step", step.Name)
+func (h *docker) Step(ctx context.Context, spec *worker.Workflow, step *worker.Step, writer io.Writer) (*worker.State, error) {
+	log := wslog.FromContext(ctx).With("workflow", spec.Name, "step", step.Name)
 
-	state := h.getState(stage.ID)
+	state := h.getState(spec.ID)
 	if state == nil {
 		return nil, errors.New("abnormal state")
 	}
@@ -201,9 +201,9 @@ func (h *docker) Step(ctx context.Context, stage *worker.Stage, step *worker.Ste
 		rc.Close()
 	}
 
-	containerConfig := toContainerConfig(stage, step)
-	hostConfig := toHostConfig(stage, step)
-	networkConfig := toNetConfig(stage, step)
+	containerConfig := toContainerConfig(spec, step)
+	hostConfig := toHostConfig(spec, step)
+	networkConfig := toNetConfig(spec, step)
 	_, err := h.client.ContainerCreate(ctx, containerConfig, hostConfig, networkConfig, nil, step.ID)
 	if err != nil {
 		return nil, err

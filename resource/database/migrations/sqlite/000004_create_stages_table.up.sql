@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS `stage_statuses`
+CREATE TABLE IF NOT EXISTS `stages`
 (
     `id`          INTEGER PRIMARY KEY AUTOINCREMENT,
     `box_id`      INTEGER      NOT NULL,

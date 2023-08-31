@@ -21,11 +21,11 @@ import (
 	"github.com/zc2638/ink/core/worker"
 )
 
-func getRootDir(stage *worker.Stage) string {
-	return filepath.Join(os.TempDir(), stage.ID)
+func getRootDir(spec *worker.Workflow) string {
+	return filepath.Join(os.TempDir(), spec.ID)
 }
 
-func getHomedir(stage *worker.Stage) string {
-	dir := getRootDir(stage)
+func getHomedir(spec *worker.Workflow) string {
+	dir := getRootDir(spec)
 	return filepath.Join(dir, "/home/ink")
 }
