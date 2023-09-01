@@ -39,26 +39,26 @@ func NewCtl() *cobra.Command {
 	cmd.PersistentFlags().AddGoFlag(
 		flags.New("server", flags.NewStringValue(getDefaultEnv("server", "http://localhost:2678")), ""),
 	)
-	Register(cmd, "apply", apply,
+	Register(cmd, "apply", "apply a configuration to a resource by file name", apply,
 		flags.New("file", flags.NewStringValue(getEnv("file")), "that contains the configuration to apply"),
-		func(cmd *cobra.Command) { cmd.Short = "apply a configuration to a resource by file name" },
 	)
 
 	workflowCmd := &cobra.Command{Use: "workflow", Short: "workflow operation"}
-	Register(workflowCmd, "get", workflowGet, func(cmd *cobra.Command) { cmd.Short = "get workflow info" })
-	Register(workflowCmd, "list", workflowList, func(cmd *cobra.Command) { cmd.Short = "list workflows" })
-	Register(workflowCmd, "delete", workflowDelete, func(cmd *cobra.Command) { cmd.Short = "delete workflow" })
+	Register(workflowCmd, "get", "get workflow info", workflowGet, workflowGetExample)
+	Register(workflowCmd, "list", "list workflows", workflowList, workflowListExample)
+	Register(workflowCmd, "delete", "delete workflow", workflowDelete, workflowDeleteExample)
 
 	boxCmd := &cobra.Command{Use: "box", Short: "box operation"}
-	Register(boxCmd, "get", boxGet, func(cmd *cobra.Command) { cmd.Short = "get box info" })
-	Register(boxCmd, "list", boxList, func(cmd *cobra.Command) { cmd.Short = "list boxes" })
-	Register(boxCmd, "delete", boxDelete, func(cmd *cobra.Command) { cmd.Short = "delete box" })
-	Register(boxCmd, "trigger", boxTrigger, func(cmd *cobra.Command) { cmd.Short = "create a build for box" })
+	Register(boxCmd, "get", "get box info", boxGet, boxGetExample)
+	Register(boxCmd, "list", "list boxes", boxList, boxListExample)
+	Register(boxCmd, "delete", "delete box", boxDelete, boxDeleteExample)
+	Register(boxCmd, "trigger", "create a build for box", buildCreate, boxTriggerExample)
 
 	buildCmd := &cobra.Command{Use: "build", Short: "build operation"}
-	Register(buildCmd, "get", buildGet, func(cmd *cobra.Command) { cmd.Short = "get build info" })
-	Register(buildCmd, "list", buildList, func(cmd *cobra.Command) { cmd.Short = "list builds" })
-	Register(buildCmd, "cancel", buildCancel, func(cmd *cobra.Command) { cmd.Short = "cancel build" })
+	Register(buildCmd, "get", "get build info", buildGet, buildGetExample)
+	Register(buildCmd, "list", "list builds", buildList, buildListExample)
+	Register(buildCmd, "cancel", "cancel a build", buildCancel, buildCancelExample)
+	Register(buildCmd, "create", "create a build", buildCreate, buildCreateExample)
 
 	cmd.AddCommand(workflowCmd, boxCmd, buildCmd)
 	return cmd
@@ -266,24 +266,6 @@ func boxDelete(cmd *cobra.Command, args []string) error {
 	return sc.BoxDelete(context.Background(), namespace, name)
 }
 
-func boxTrigger(cmd *cobra.Command, args []string) error {
-	namespace, name, err := getNN(args)
-	if err != nil {
-		return err
-	}
-
-	sc, err := newServerClient(cmd)
-	if err != nil {
-		return err
-	}
-	number, err := sc.BuildCreate(context.Background(), namespace, name)
-	if err != nil {
-		return err
-	}
-	writeString(strconv.FormatUint(number, 10))
-	return nil
-}
-
 func buildGet(cmd *cobra.Command, args []string) error {
 	namespace, name, err := getNN(args)
 	if err != nil {
@@ -374,4 +356,22 @@ func buildCancel(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	return sc.BuildCancel(context.Background(), namespace, name, number)
+}
+
+func buildCreate(cmd *cobra.Command, args []string) error {
+	namespace, name, err := getNN(args)
+	if err != nil {
+		return err
+	}
+
+	sc, err := newServerClient(cmd)
+	if err != nil {
+		return err
+	}
+	number, err := sc.BuildCreate(context.Background(), namespace, name)
+	if err != nil {
+		return err
+	}
+	writeString(strconv.FormatUint(number, 10))
+	return nil
 }

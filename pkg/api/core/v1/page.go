@@ -57,6 +57,10 @@ func (o *Pagination) SetTotal(total int64) *Pagination {
 }
 
 func (o *Pagination) Scope(db *gorm.DB) *gorm.DB {
+	if o.Size < 0 {
+		return db
+	}
+
 	o.complete()
 	offset := (o.Page - 1) * o.Size
 	return db.Limit(o.Size).Offset(offset)
@@ -75,7 +79,11 @@ func (o *Pagination) List(list any) map[string]any {
 }
 
 func (o *Pagination) ToValues() url.Values {
+	size := o.Size
 	o.complete()
+	if size < 0 {
+		o.Size = size
+	}
 	vs := make(url.Values)
 	vs.Set("page", strconv.Itoa(o.Page))
 	vs.Set("size", strconv.Itoa(o.Size))

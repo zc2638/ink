@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -30,13 +31,24 @@ import (
 	"github.com/zc2638/ink/pkg/files"
 )
 
-func Register(cmd *cobra.Command, name string, opts ...any) {
-	subCmd := &cobra.Command{
-		Use:          name,
-		SilenceUsage: true,
+func Register(cmd *cobra.Command, name string, short string, opts ...any) {
+	subCmd := new(cobra.Command)
+	for _, opt := range opts {
+		v, ok := opt.(*cobra.Command)
+		if !ok {
+			continue
+		}
+		subCmd = v
 	}
+
+	subCmd.Use = name
+	subCmd.SilenceUsage = true
+	subCmd.Short = short
+
 	for _, opt := range opts {
 		switch v := opt.(type) {
+		case *cobra.Command:
+			continue
 		case func(*cobra.Command, []string):
 			subCmd.Run = v
 		case func(*cobra.Command, []string) error:
@@ -45,6 +57,8 @@ func Register(cmd *cobra.Command, name string, opts ...any) {
 			subCmd.Flags().AddGoFlagSet(v)
 		case *flag.Flag:
 			subCmd.Flags().AddGoFlag(v)
+		case Example:
+			subCmd.Example = IndentLine(v.String())
 		case func(*cobra.Command):
 			v(subCmd)
 		}
@@ -153,4 +167,25 @@ func write(b []byte) {
 
 func writeString(s string) {
 	fmt.Println(s)
+}
+
+func IndentLine(s string) string {
+	return Indent(2, s)
+}
+
+func Indent(n int, s string) string {
+	if n < 1 {
+		return s
+	}
+	spaces := fmt.Sprintf("%"+strconv.Itoa(n)+"s", "")
+
+	s = strings.TrimSpace(s)
+	parts := strings.Split(s, "\n")
+	var b strings.Builder
+	for _, part := range parts {
+		b.WriteString(spaces)
+		b.WriteString(part)
+		b.WriteString("\n")
+	}
+	return b.String()
 }
