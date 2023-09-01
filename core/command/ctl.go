@@ -16,31 +16,46 @@ package command
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/zc2638/wslog"
+	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 
+	"github.com/zc2638/ink/core/clients"
 	"github.com/zc2638/ink/core/constant"
+	"github.com/zc2638/ink/core/worker"
+	"github.com/zc2638/ink/core/worker/hooks"
 	v1 "github.com/zc2638/ink/pkg/api/core/v1"
 	"github.com/zc2638/ink/pkg/flags"
 	"github.com/zc2638/ink/pkg/printer"
-	"github.com/zc2638/ink/pkg/utils"
 )
 
 func NewCtl() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: constant.CtlName,
 	}
-	cmd.PersistentFlags().AddGoFlag(
-		flags.New("server", flags.NewStringValue(getDefaultEnv("server", "http://localhost:2678")), ""),
+	persistentFlags := cmd.PersistentFlags()
+	persistentFlags.AddGoFlag(
+		flags.NewStringEnvFlag(constant.Name, "server", "http://localhost:2678",
+			"the address and port of the inkd API server"),
 	)
+	persistentFlags.AddGoFlag(
+		flags.NewBoolEnvFlag(constant.Name, "direct", false,
+			"If true, the request will be executed directly by the built-in worker without request inkd"),
+	)
+
 	Register(cmd, "apply", "apply a configuration to a resource by file name", apply,
-		flags.New("file", flags.NewStringValue(getEnv("file")), "that contains the configuration to apply"),
+		flags.NewStringEnvFlag(constant.Name, "file", "",
+			"that contains the configuration to apply"),
+	)
+	Register(cmd, "exec", "execute a configuration to a resource by file name", exec,
+		flags.NewStringEnvFlag(constant.Name, "file", "",
+			"that contains the configuration to exec"),
 	)
 
 	workflowCmd := &cobra.Command{Use: "workflow", Short: "workflow operation"}
@@ -62,90 +77,6 @@ func NewCtl() *cobra.Command {
 
 	cmd.AddCommand(workflowCmd, boxCmd, buildCmd)
 	return cmd
-}
-
-func apply(cmd *cobra.Command, _ []string) error {
-	items, err := getFileData(cmd)
-	if err != nil {
-		return err
-	}
-
-	objSet := make(map[string][]v1.UnstructuredObject)
-	for _, item := range items {
-		jsonBytes := item.Data
-		if !utils.IsJSON(item.Data) {
-			jsonBytes, err = utils.ConvertYAMLToJSON(item.Data)
-			if err != nil {
-				return err
-			}
-		}
-
-		var objs []v1.UnstructuredObject
-		if utils.IsJSONArray(jsonBytes) {
-			if err := json.Unmarshal(jsonBytes, &objs); err != nil {
-				return err
-			}
-		} else {
-			var obj v1.UnstructuredObject
-			if err := json.Unmarshal(jsonBytes, &obj); err != nil {
-				return err
-			}
-			objs = []v1.UnstructuredObject{obj}
-		}
-		for _, obj := range objs {
-			kind := obj.GetKind()
-			objSet[kind] = append(objSet[kind], obj)
-		}
-	}
-
-	sc, err := newServerClient(cmd)
-	if err != nil {
-		return err
-	}
-
-	ctx := context.Background()
-
-	// TODO kind Secret
-	for _, obj := range objSet[v1.KindWorkflow] {
-		var data v1.Workflow
-		if err := obj.ToObject(&data); err != nil {
-			return err
-		}
-		_, err := sc.WorkflowInfo(ctx, data.GetNamespace(), data.GetName())
-		if err == nil {
-			if err = sc.WorkflowUpdate(ctx, &data); err == nil {
-				writeString(fmt.Sprintf("Update: %s", data.Metadata.String()))
-			}
-		} else if errors.Is(err, constant.ErrNoRecord) {
-			if err = sc.WorkflowCreate(ctx, &data); err == nil {
-				writeString(fmt.Sprintf("Create: %s", data.Metadata.String()))
-			}
-		}
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, obj := range objSet[v1.KindBox] {
-		var data v1.Box
-		if err := obj.ToObject(&data); err != nil {
-			return err
-		}
-		_, err := sc.BoxInfo(ctx, data.GetNamespace(), data.GetName())
-		if err == nil {
-			if err = sc.BoxUpdate(ctx, &data); err == nil {
-				writeString(fmt.Sprintf("Update: %s", data.Metadata.String()))
-			}
-		} else if errors.Is(err, constant.ErrNoRecord) {
-			if err = sc.BoxCreate(ctx, &data); err == nil {
-				writeString(fmt.Sprintf("Create: %s", data.Metadata.String()))
-			}
-		}
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func workflowGet(cmd *cobra.Command, args []string) error {
@@ -373,5 +304,155 @@ func buildCreate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	writeString(strconv.FormatUint(number, 10))
+	return nil
+}
+
+func apply(cmd *cobra.Command, _ []string) error {
+	objSet, err := parseObjects(cmd)
+	if err != nil {
+		return err
+	}
+	sc, err := newServerClient(cmd)
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+
+	// TODO kind Secret
+	for _, obj := range objSet[v1.KindWorkflow] {
+		var data v1.Workflow
+		if err := obj.ToObject(&data); err != nil {
+			return err
+		}
+		_, err := sc.WorkflowInfo(ctx, data.GetNamespace(), data.GetName())
+		if err == nil {
+			if err = sc.WorkflowUpdate(ctx, &data); err == nil {
+				writeString(fmt.Sprintf("Update: %s", data.Metadata.String()))
+			}
+		} else if errors.Is(err, constant.ErrNoRecord) {
+			if err = sc.WorkflowCreate(ctx, &data); err == nil {
+				writeString(fmt.Sprintf("Create: %s", data.Metadata.String()))
+			}
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, obj := range objSet[v1.KindBox] {
+		var data v1.Box
+		if err := obj.ToObject(&data); err != nil {
+			return err
+		}
+		_, err := sc.BoxInfo(ctx, data.GetNamespace(), data.GetName())
+		if err == nil {
+			if err = sc.BoxUpdate(ctx, &data); err == nil {
+				writeString(fmt.Sprintf("Update: %s", data.Metadata.String()))
+			}
+		} else if errors.Is(err, constant.ErrNoRecord) {
+			if err = sc.BoxCreate(ctx, &data); err == nil {
+				writeString(fmt.Sprintf("Create: %s", data.Metadata.String()))
+			}
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func exec(cmd *cobra.Command, _ []string) error {
+	objSet, err := parseObjects(cmd)
+	if err != nil {
+		return err
+	}
+	dataCh := make(chan *v1.Data)
+	wc := clients.NewClientDirect(dataCh).V1()
+
+	allSecrets := make([]*v1.Secret, 0)
+	for _, obj := range objSet[v1.KindSecret] {
+		var secret v1.Secret
+		if err := obj.ToObject(&secret); err != nil {
+			return err
+		}
+		allSecrets = append(allSecrets, &secret)
+	}
+
+	// TODO 暂时仅支持 workflow 单独串行执行
+	for _, obj := range objSet[v1.KindWorkflow] {
+		var workflow v1.Workflow
+		if err := obj.ToObject(&workflow); err != nil {
+			return err
+		}
+
+		var hook worker.Hook
+		workerObj := workflow.Worker()
+		switch workerObj.Kind {
+		case v1.WorkerKindHost:
+			hook, err = hooks.NewHost()
+			if err != nil {
+				return fmt.Errorf("init host hook failed: %v", err)
+			}
+		case v1.WorkerKindDocker:
+			hook, err = hooks.NewDocker("", "")
+			if err != nil {
+				return fmt.Errorf("init docker hook failed: %v", err)
+			}
+		default:
+			return fmt.Errorf("unsupported kind: %s", workerObj.Kind)
+		}
+
+		secrets := make([]*v1.Secret, 0)
+		for _, sec := range allSecrets {
+			if sec.GetNamespace() != workflow.GetNamespace() {
+				continue
+			}
+			secrets = append(secrets, sec)
+		}
+
+		data := &v1.Data{
+			Workflow: &workflow,
+			Status: &v1.Stage{
+				Number:    1,
+				Phase:     v1.PhasePending,
+				Name:      workflow.GetName(),
+				Limit:     workflow.Spec.Concurrency,
+				Worker:    *workflow.Worker(),
+				DependsOn: workflow.Spec.DependsOn,
+			},
+			Secrets: secrets,
+		}
+		for sk, sv := range workflow.Spec.Steps {
+			step := &v1.Step{
+				Number: uint64(sk) + 1,
+				Phase:  v1.PhasePending,
+				Name:   sv.Name,
+			}
+			step.ID = step.Number
+			data.Status.Steps = append(data.Status.Steps, step)
+		}
+
+		log := wslog.With(
+			"name", workflow.GetName(),
+			"namespace", workflow.GetNamespace(),
+			"worker_kind", workerObj.Kind.String(),
+		)
+		log.Info("Begin workflow")
+
+		eg, ctx := errgroup.WithContext(context.Background())
+		eg.Go(func() error { return worker.Run(ctx, wc, hook) })
+		eg.Go(func() error {
+			select {
+			case dataCh <- data:
+			case <-ctx.Done():
+			}
+			return nil
+		})
+		if err := eg.Wait(); err != nil {
+			return err
+		}
+		log.Info("End workflow")
+	}
 	return nil
 }

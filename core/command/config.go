@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func ParseAllConfig(configPath string, data any, envPrefix string, subKey string) (*viper.Viper, error) {
+func ParseConfig(configPath string, data any, envPrefix string, subKey string) (*viper.Viper, error) {
 	if len(configPath) == 0 {
 		return nil, errors.New("config path must be defined")
 	}
@@ -47,10 +47,6 @@ func ParseAllConfig(configPath string, data any, envPrefix string, subKey string
 	return v, v.Unmarshal(data, func(dc *mapstructure.DecoderConfig) {
 		dc.TagName = "json"
 	})
-}
-
-func ParseConfig(configPath string, data any, envPrefix string) (*viper.Viper, error) {
-	return ParseAllConfig(configPath, data, envPrefix, "")
 }
 
 func DefaultConfig(service string) string {

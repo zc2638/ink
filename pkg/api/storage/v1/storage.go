@@ -35,12 +35,46 @@ func (m *Model) GetID() uint64 {
 	return m.ID
 }
 
+type Secret struct {
+	Model
+
+	Namespace string
+	Name      string
+	Data      string
+}
+
+func (s *Secret) TableName() string {
+	return "secrets"
+}
+
 type Workflow struct {
 	Model
 
 	Namespace string
 	Name      string
 	Data      string
+}
+
+func (s *Secret) FromAPI(in *v1.Secret) error {
+	s.Namespace = in.GetNamespace()
+	s.Name = in.GetName()
+	b, err := json.Marshal(in)
+	if err != nil {
+		return err
+	}
+	s.Data = string(b)
+	return nil
+}
+
+func (s *Secret) ToAPI() (*v1.Secret, error) {
+	var out v1.Secret
+	if err := json.Unmarshal([]byte(s.Data), &out); err != nil {
+		return nil, err
+	}
+	out.Namespace = s.Namespace
+	out.Name = s.Name
+	out.Creation = s.CreatedAt
+	return &out, nil
 }
 
 func (s *Workflow) TableName() string {

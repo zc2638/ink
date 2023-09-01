@@ -167,13 +167,32 @@ func handleInfo() http.HandlerFunc {
 			return
 		}
 
-		// TODO 获取 secret 配置
-
 		data := &v1.Data{
-			Box:      box,
-			Build:    build,
 			Workflow: stage,
 			Status:   status,
+		}
+
+		// get secrets
+		secretNames := sets.NewString()
+		for _, v := range box.Resources {
+			if v.Kind != v1.KindSecret {
+				continue
+			}
+			secretNames.Add(v.Name)
+		}
+		var secretList []storageV1.Secret
+		secretS := &storageV1.Secret{Namespace: box.GetNamespace()}
+		if err := db.Where(secretS).Where("name in (?)", secretNames.List()).Find(&secretList).Error; err != nil {
+			wrapper.InternalError(w, err)
+			return
+		}
+		for _, v := range secretList {
+			secret, err := v.ToAPI()
+			if err != nil {
+				wrapper.InternalError(w, err)
+				return
+			}
+			data.Secrets = append(data.Secrets, secret)
 		}
 		ctr.OK(w, data)
 	}

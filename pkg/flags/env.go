@@ -12,20 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package framework
+package flags
 
 import (
-	"github.com/zc2638/ink/core/clients"
+	"os"
+	"strings"
 )
 
-const Name = "e2e"
-
-var (
-	Server clients.ServerV1
-	Client clients.WorkerV1
-	Addr   string
-)
-
-func BuildName(name string) string {
-	return Name + "_" + name
+func GetDefaultEnv(prefix, name, defValue string) string {
+	key := strings.ToUpper(prefix + "_" + name)
+	value := os.Getenv(key)
+	if value == "" {
+		value = defValue
+	}
+	return value
 }

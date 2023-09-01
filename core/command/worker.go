@@ -24,6 +24,7 @@ import (
 	"github.com/zc2638/wslog"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/zc2638/ink/core/clients"
 	"github.com/zc2638/ink/core/constant"
 	"github.com/zc2638/ink/core/worker"
 	"github.com/zc2638/ink/core/worker/hooks"
@@ -39,7 +40,7 @@ func NewWorker() *cobra.Command {
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var cfg WorkerConfig
-			_, err := ParseAllConfig(opt.ConfigPath, &cfg, constant.DaemonName, opt.ConfigSubKey)
+			_, err := ParseConfig(opt.ConfigPath, &cfg, constant.DaemonName, opt.ConfigSubKey)
 			if err != nil {
 				return err
 			}
@@ -56,7 +57,6 @@ func NewWorker() *cobra.Command {
 					v.Worker = &v1.Worker{Kind: v1.WorkerKindDocker}
 				}
 
-				// TODO
 				var hook worker.Hook
 				switch v.Worker.Kind {
 				case v1.WorkerKindHost:
@@ -75,7 +75,11 @@ func NewWorker() *cobra.Command {
 					return fmt.Errorf("unsupported kind: %s", v.Worker.Kind)
 				}
 
-				w, err := worker.New(v, hook, logger)
+				wc, err := clients.NewWorker(v.Addr, v.Name, v.Worker)
+				if err != nil {
+					return fmt.Errorf("create worker client failed: %v", err)
+				}
+				w, err := worker.New(wc, hook, logger, v.Count)
 				if err != nil {
 					return fmt.Errorf("create worker(%d) failed: %v", k, err)
 				}
@@ -102,8 +106,15 @@ type WorkerOption struct {
 }
 
 type WorkerConfig struct {
-	Logger  wslog.Config    `json:"logger,omitempty"`
-	Workers []worker.Config `json:"workers,omitempty"`
+	Logger  wslog.Config       `json:"logger,omitempty"`
+	Workers []WorkerItemConfig `json:"workers,omitempty"`
+}
+
+type WorkerItemConfig struct {
+	Name   string     `json:"name"`
+	Addr   string     `json:"addr"`
+	Count  int        `json:"count"`
+	Worker *v1.Worker `json:"worker"`
 }
 
 func (c *WorkerConfig) Validate() error {

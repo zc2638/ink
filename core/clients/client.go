@@ -28,11 +28,11 @@ import (
 	"github.com/zc2638/ink/pkg/livelog"
 )
 
-type Client interface {
-	V1() ClientV1
+type Worker interface {
+	V1() WorkerV1
 }
 
-type ClientV1 interface {
+type WorkerV1 interface {
 	Name() string
 	Status(ctx context.Context) error
 	Request(ctx context.Context) (*v1.Stage, error)
@@ -46,7 +46,7 @@ type ClientV1 interface {
 	WatchCancel(ctx context.Context, buildID uint64) error
 }
 
-func NewClient(addr, name string, worker *v1.Worker) (Client, error) {
+func NewWorker(addr, name string, worker *v1.Worker) (Worker, error) {
 	if err := validateURI(addr); err != nil {
 		return nil, fmt.Errorf("validate uri failed: %v", err)
 	}
@@ -82,7 +82,7 @@ type client struct {
 	worker *v1.Worker
 }
 
-func (c *client) V1() ClientV1 {
+func (c *client) V1() WorkerV1 {
 	addr := strings.TrimSuffix(c.Address, "/")
 	rc := resty.New().SetBaseURL(addr + "/api/client/v1")
 	name := c.name + "." + strconv.Itoa(c.index)

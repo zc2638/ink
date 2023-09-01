@@ -17,12 +17,14 @@ package clients
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sync"
 
 	v1 "github.com/zc2638/ink/pkg/api/core/v1"
 	"github.com/zc2638/ink/pkg/livelog"
 )
 
-func NewClientDirect(dataCh chan *v1.Data) ClientV1 {
+func NewClientDirect(dataCh chan *v1.Data) Worker {
 	return &clientDirect{
 		dataCh: dataCh,
 		ds:     make(map[uint64]*v1.Data),
@@ -30,8 +32,13 @@ func NewClientDirect(dataCh chan *v1.Data) ClientV1 {
 }
 
 type clientDirect struct {
+	mux    sync.Mutex
 	dataCh chan *v1.Data
 	ds     map[uint64]*v1.Data
+}
+
+func (c *clientDirect) V1() WorkerV1 {
+	return c
 }
 
 func (c *clientDirect) Name() string {
@@ -47,19 +54,23 @@ func (c *clientDirect) Request(ctx context.Context) (*v1.Stage, error) {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	case data := <-c.dataCh:
-		c.ds[data.Workflow.ID] = data
+		c.mux.Lock()
+		defer c.mux.Unlock()
+
+		c.ds[data.Status.ID] = data
 		return data.Status, nil
 	}
 }
 
-func (c *clientDirect) Accept(_ context.Context, stageID uint64) error {
-	if _, ok := c.ds[stageID]; ok {
-		return nil
-	}
-	return errors.New("not found")
+func (c *clientDirect) Accept(ctx context.Context, stageID uint64) error {
+	_, err := c.Info(ctx, stageID)
+	return err
 }
 
 func (c *clientDirect) Info(_ context.Context, stageID uint64) (*v1.Data, error) {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+
 	data, ok := c.ds[stageID]
 	if !ok {
 		return nil, errors.New("not found")
@@ -67,26 +78,30 @@ func (c *clientDirect) Info(_ context.Context, stageID uint64) (*v1.Data, error)
 	return data, nil
 }
 
-func (c *clientDirect) StageBegin(_ context.Context, stage *v1.Stage) error {
+func (c *clientDirect) StageBegin(_ context.Context, _ *v1.Stage) error {
 	return nil
 }
 
-func (c *clientDirect) StageEnd(_ context.Context, stage *v1.Stage) error {
+func (c *clientDirect) StageEnd(_ context.Context, _ *v1.Stage) error {
 	return nil
 }
 
-func (c *clientDirect) StepBegin(_ context.Context, step *v1.Step) error {
+func (c *clientDirect) StepBegin(_ context.Context, _ *v1.Step) error {
 	return nil
 }
 
-func (c *clientDirect) StepEnd(_ context.Context, step *v1.Step) error {
+func (c *clientDirect) StepEnd(_ context.Context, _ *v1.Step) error {
 	return nil
 }
 
-func (c *clientDirect) LogUpload(_ context.Context, stepID uint64, lines []*livelog.Line) error {
+func (c *clientDirect) LogUpload(_ context.Context, _ uint64, lines []*livelog.Line) error {
+	for _, line := range lines {
+		fmt.Print(line.Content)
+	}
 	return nil
 }
 
-func (c *clientDirect) WatchCancel(_ context.Context, buildID uint64) error {
-	return nil
+func (c *clientDirect) WatchCancel(ctx context.Context, _ uint64) error {
+	<-ctx.Done()
+	return ctx.Err()
 }

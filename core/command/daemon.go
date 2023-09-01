@@ -47,7 +47,7 @@ func NewDaemon() *cobra.Command {
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var cfg DaemonConfig
-			if _, err := ParseConfig(opt.ConfigPath, &cfg, constant.DaemonName); err != nil {
+			if _, err := ParseConfig(opt.ConfigPath, &cfg, constant.DaemonName, opt.ConfigSubKey); err != nil {
 				return err
 			}
 			if err := cfg.Validate(); err != nil {
@@ -86,11 +86,13 @@ func NewDaemon() *cobra.Command {
 	}
 
 	cmd.PersistentFlags().StringVarP(&opt.ConfigPath, "config", "c", opt.ConfigPath, "config path")
+	cmd.PersistentFlags().StringVar(&opt.ConfigSubKey, "config-sub-key", opt.ConfigSubKey, "config sub key for config data")
 	return cmd
 }
 
 type DaemonOption struct {
-	ConfigPath string
+	ConfigPath   string
+	ConfigSubKey string
 }
 
 type DaemonConfig struct {

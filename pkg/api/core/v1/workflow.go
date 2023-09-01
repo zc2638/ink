@@ -20,6 +20,15 @@ type Workflow struct {
 	Spec WorkflowSpec `json:"spec" yaml:"spec"`
 }
 
+func (w *Workflow) Worker() *Worker {
+	if w.Spec.Worker != nil {
+		return w.Spec.Worker
+	}
+	return &Worker{
+		Kind: WorkerKindDocker,
+	}
+}
+
 type WorkflowSpec struct {
 	Steps       []Flow   `json:"steps" yaml:"steps"`
 	WorkingDir  string   `json:"workingDir,omitempty" yaml:"workingDir,omitempty"`

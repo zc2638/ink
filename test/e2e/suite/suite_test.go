@@ -32,7 +32,7 @@ func Test(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	clientC, err := clients.NewClient(addr, framework.Name, &v1.Worker{Kind: v1.WorkerKindHost})
+	clientC, err := clients.NewWorker(addr, framework.Name, &v1.Worker{Kind: v1.WorkerKindHost})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -151,29 +151,26 @@ func (s *srv) Create(ctx context.Context, namespace, name string) (uint64, error
 		}
 
 		for k, v := range box.Resources {
-			stageS := &storageV1.Workflow{
+			sd := &storageV1.Workflow{
 				Namespace: box.Namespace,
 				Name:      v.Name,
 			}
-			if err := tx.Where(stageS).First(stageS).Error; err != nil {
+			if err := tx.Where(sd).First(sd).Error; err != nil {
 				return err
 			}
-			stage, err := stageS.ToAPI()
+			workflow, err := sd.ToAPI()
 			if err != nil {
 				return err
-			}
-			if stage.Spec.Worker == nil {
-				stage.Spec.Worker = &v1.Worker{Kind: v1.WorkerKindDocker}
 			}
 			status := &v1.Stage{
 				BoxID:     box.ID,
 				BuildID:   buildS.ID,
 				Number:    uint64(k) + 1,
 				Phase:     v1.PhasePending,
-				Name:      stage.Name,
-				Limit:     stage.Spec.Concurrency,
-				Worker:    *stage.Spec.Worker,
-				DependsOn: stage.Spec.DependsOn,
+				Name:      workflow.Name,
+				Limit:     workflow.Spec.Concurrency,
+				Worker:    *workflow.Worker(),
+				DependsOn: workflow.Spec.DependsOn,
 			}
 			var statusS storageV1.Stage
 			if err := statusS.FromAPI(status); err != nil {
@@ -183,7 +180,7 @@ func (s *srv) Create(ctx context.Context, namespace, name string) (uint64, error
 				return err
 			}
 
-			for sk, sv := range stage.Spec.Steps {
+			for sk, sv := range workflow.Spec.Steps {
 				step := &v1.Step{
 					StageID: statusS.ID,
 					Number:  uint64(sk) + 1,

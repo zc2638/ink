@@ -15,6 +15,7 @@
 package command
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -29,6 +30,7 @@ import (
 	"github.com/zc2638/ink/core/constant"
 	v1 "github.com/zc2638/ink/pkg/api/core/v1"
 	"github.com/zc2638/ink/pkg/files"
+	"github.com/zc2638/ink/pkg/utils"
 )
 
 func Register(cmd *cobra.Command, name string, short string, opts ...any) {
@@ -76,19 +78,6 @@ func newServerClient(cmd *cobra.Command) (clients.ServerV1, error) {
 		return nil, fmt.Errorf("init client failed: %v", err)
 	}
 	return sc.V1(), nil
-}
-
-func getEnv(name string) string {
-	return getDefaultEnv(name, "")
-}
-
-func getDefaultEnv(name string, defValue string) string {
-	key := strings.ToUpper(constant.Name + "_" + name)
-	value := os.Getenv(key)
-	if value == "" {
-		value = defValue
-	}
-	return value
 }
 
 func getNN(args []string) (namespace, name string, err error) {
@@ -188,4 +177,40 @@ func Indent(n int, s string) string {
 		b.WriteString("\n")
 	}
 	return b.String()
+}
+
+func parseObjects(cmd *cobra.Command) (map[string][]v1.UnstructuredObject, error) {
+	items, err := getFileData(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	objSet := make(map[string][]v1.UnstructuredObject)
+	for _, item := range items {
+		jsonBytes := item.Data
+		if !utils.IsJSON(item.Data) {
+			jsonBytes, err = utils.ConvertYAMLToJSON(item.Data)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		var objs []v1.UnstructuredObject
+		if utils.IsJSONArray(jsonBytes) {
+			if err := json.Unmarshal(jsonBytes, &objs); err != nil {
+				return nil, err
+			}
+		} else {
+			var obj v1.UnstructuredObject
+			if err := json.Unmarshal(jsonBytes, &obj); err != nil {
+				return nil, err
+			}
+			objs = []v1.UnstructuredObject{obj}
+		}
+		for _, obj := range objs {
+			kind := obj.GetKind()
+			objSet[kind] = append(objSet[kind], obj)
+		}
+	}
+	return objSet, nil
 }

@@ -37,14 +37,18 @@ type Hook interface {
 	Step(ctx context.Context, spec *Workflow, step *Step, writer io.Writer) (*State, error)
 }
 
-type Config struct {
-	Name   string     `json:"name"`
-	Addr   string     `json:"addr"`
-	Count  int        `json:"count"`
-	Worker *v1.Worker `json:"worker"`
+func NewMust(client clients.Worker, hook Hook, log *wslog.Logger, count int) *Worker {
+	w, err := New(client, hook, log, count)
+	if err != nil {
+		panic(err)
+	}
+	return w
 }
 
-func New(cfg Config, hook Hook, log *wslog.Logger) (*Worker, error) {
+func New(client clients.Worker, hook Hook, log *wslog.Logger, count int) (*Worker, error) {
+	if client == nil {
+		return nil, errors.New("client is nil")
+	}
 	if hook == nil {
 		return nil, errors.New("hook is nil")
 	}
@@ -52,25 +56,21 @@ func New(cfg Config, hook Hook, log *wslog.Logger) (*Worker, error) {
 		log = wslog.Default()
 	}
 
-	client, err := clients.NewClient(cfg.Addr, cfg.Name, cfg.Worker)
-	if err != nil {
-		return nil, err
-	}
 	w := &Worker{
 		log:    log,
 		client: client,
 		hook:   hook,
 		count:  1,
 	}
-	if cfg.Count > 0 {
-		w.count = cfg.Count
+	if count > 0 {
+		w.count = count
 	}
 	return w, nil
 }
 
 type Worker struct {
 	log    *wslog.Logger
-	client clients.Client
+	client clients.Worker
 	hook   Hook
 	count  int
 }
@@ -113,7 +113,7 @@ func (w *Worker) Run(ctx context.Context) error {
 	return eg.Wait()
 }
 
-func Run(ctx context.Context, client clients.ClientV1, hook Hook) error {
+func Run(ctx context.Context, client clients.WorkerV1, hook Hook) error {
 	log := wslog.FromContext(ctx)
 
 	log.Debug("Request stage")
@@ -171,7 +171,7 @@ func Run(ctx context.Context, client clients.ClientV1, hook Hook) error {
 
 func execute(
 	ctx context.Context,
-	client clients.ClientV1,
+	client clients.WorkerV1,
 	hook Hook,
 	workflow *v1.Workflow,
 	status *v1.Stage,
@@ -279,11 +279,9 @@ func execute(
 		}
 	}
 
-	if !failed {
-		log.Debug("Execute stage end hook")
-		if err := hook.End(ctx, spec); err != nil {
-			log.Error("Execute stage end hook failed", "error", err)
-		}
+	log.Debug("Execute stage end hook")
+	if err := hook.End(ctx, spec); err != nil {
+		log.Error("Execute stage end hook failed", "error", err)
 	}
 
 	status.Stopped = time.Now().Unix()
@@ -299,7 +297,7 @@ func execute(
 	return nil
 }
 
-func cancel(ctx context.Context, client clients.ClientV1, status *v1.Stage) error {
+func cancel(ctx context.Context, client clients.WorkerV1, status *v1.Stage) error {
 	if status.Phase.IsDone() {
 		return nil
 	}

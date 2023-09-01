@@ -16,9 +16,10 @@ package flags
 
 import (
 	"flag"
+	"strconv"
 )
 
-func New(name string, value Value, usage string) *flag.Flag {
+func NewFlag(name string, value Value, usage string) *flag.Flag {
 	return &flag.Flag{
 		Name:     name,
 		Value:    value,
@@ -27,13 +28,24 @@ func New(name string, value Value, usage string) *flag.Flag {
 	}
 }
 
+func NewStringEnvFlag(envPrefix, name, defValue, usage string) *flag.Flag {
+	val := GetDefaultEnv(envPrefix, name, defValue)
+	value := NewStringValue(val)
+	return NewFlag(name, value, usage)
+}
+
+func NewBoolEnvFlag(envPrefix, name string, defValue bool, usage string) *flag.Flag {
+	val := GetDefaultEnv(envPrefix, name, strconv.FormatBool(defValue))
+	value := NewBoolValue(false)
+	_ = value.Set(val)
+	return NewFlag(name, value, usage)
+}
+
 type Value interface {
 	flag.Value
 
 	Get() any
 }
-
-type stringValue string
 
 func NewStringValue(val string) Value {
 	p := new(string)
@@ -45,6 +57,8 @@ func NewStringVarValue(val string, p *string) Value {
 	return (*stringValue)(p)
 }
 
+type stringValue string
+
 func (s *stringValue) Set(val string) error {
 	*s = stringValue(val)
 	return nil
@@ -53,3 +67,25 @@ func (s *stringValue) Set(val string) error {
 func (s *stringValue) Get() any { return string(*s) }
 
 func (s *stringValue) String() string { return string(*s) }
+
+func NewBoolValue(val bool) Value {
+	p := new(bool)
+	return NewBoolVarValue(val, p)
+}
+
+func NewBoolVarValue(val bool, p *bool) Value {
+	*p = val
+	return (*boolValue)(p)
+}
+
+type boolValue bool
+
+func (b *boolValue) Set(s string) error {
+	v, _ := strconv.ParseBool(s)
+	*b = boolValue(v)
+	return nil
+}
+
+func (b *boolValue) Get() any { return bool(*b) }
+
+func (b *boolValue) String() string { return strconv.FormatBool(bool(*b)) }
