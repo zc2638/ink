@@ -368,7 +368,7 @@ func exec(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	dataCh := make(chan *v1.Data)
-	wc := clients.NewClientDirect(dataCh).V1()
+	wc := clients.NewClientDirect(dataCh)
 
 	allSecrets := make([]*v1.Secret, 0)
 	for _, obj := range objSet[v1.KindSecret] {

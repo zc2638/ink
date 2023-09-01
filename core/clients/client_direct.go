@@ -24,7 +24,7 @@ import (
 	"github.com/zc2638/ink/pkg/livelog"
 )
 
-func NewClientDirect(dataCh chan *v1.Data) Worker {
+func NewClientDirect(dataCh chan *v1.Data) WorkerV1 {
 	return &clientDirect{
 		dataCh: dataCh,
 		ds:     make(map[uint64]*v1.Data),
@@ -35,10 +35,6 @@ type clientDirect struct {
 	mux    sync.Mutex
 	dataCh chan *v1.Data
 	ds     map[uint64]*v1.Data
-}
-
-func (c *clientDirect) V1() WorkerV1 {
-	return c
 }
 
 func (c *clientDirect) Name() string {
@@ -86,7 +82,8 @@ func (c *clientDirect) StageEnd(_ context.Context, _ *v1.Stage) error {
 	return nil
 }
 
-func (c *clientDirect) StepBegin(_ context.Context, _ *v1.Step) error {
+func (c *clientDirect) StepBegin(_ context.Context, step *v1.Step) error {
+	fmt.Printf("\x1b[1m%s\x1b[0m\n", "[STEP] "+step.Name)
 	return nil
 }
 
