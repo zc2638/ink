@@ -40,24 +40,25 @@ func NewCtl() *cobra.Command {
 		flags.New("server", flags.NewStringValue(getDefaultEnv("server", "http://localhost:2678")), ""),
 	)
 	Register(cmd, "apply", apply,
-		flags.New("file", flags.NewStringValue(getEnv("file")), ""),
+		flags.New("file", flags.NewStringValue(getEnv("file")), "that contains the configuration to apply"),
+		func(cmd *cobra.Command) { cmd.Short = "apply a configuration to a resource by file name" },
 	)
 
-	workflowCmd := &cobra.Command{Use: "workflow"}
-	Register(workflowCmd, "get", workflowGet)
-	Register(workflowCmd, "list", workflowList)
-	Register(workflowCmd, "delete", workflowDelete)
+	workflowCmd := &cobra.Command{Use: "workflow", Short: "workflow operation"}
+	Register(workflowCmd, "get", workflowGet, func(cmd *cobra.Command) { cmd.Short = "get workflow info" })
+	Register(workflowCmd, "list", workflowList, func(cmd *cobra.Command) { cmd.Short = "list workflows" })
+	Register(workflowCmd, "delete", workflowDelete, func(cmd *cobra.Command) { cmd.Short = "delete workflow" })
 
-	boxCmd := &cobra.Command{Use: "box"}
-	Register(boxCmd, "get", boxGet)
-	Register(boxCmd, "list", boxList)
-	Register(boxCmd, "delete", boxDelete)
-	Register(boxCmd, "trigger", boxTrigger)
+	boxCmd := &cobra.Command{Use: "box", Short: "box operation"}
+	Register(boxCmd, "get", boxGet, func(cmd *cobra.Command) { cmd.Short = "get box info" })
+	Register(boxCmd, "list", boxList, func(cmd *cobra.Command) { cmd.Short = "list boxes" })
+	Register(boxCmd, "delete", boxDelete, func(cmd *cobra.Command) { cmd.Short = "delete box" })
+	Register(boxCmd, "trigger", boxTrigger, func(cmd *cobra.Command) { cmd.Short = "create a build for box" })
 
-	buildCmd := &cobra.Command{Use: "build"}
-	Register(buildCmd, "get", buildGet)
-	Register(buildCmd, "list", buildList)
-	Register(buildCmd, "cancel", buildCancel)
+	buildCmd := &cobra.Command{Use: "build", Short: "build operation"}
+	Register(buildCmd, "get", buildGet, func(cmd *cobra.Command) { cmd.Short = "get build info" })
+	Register(buildCmd, "list", buildList, func(cmd *cobra.Command) { cmd.Short = "list builds" })
+	Register(buildCmd, "cancel", buildCancel, func(cmd *cobra.Command) { cmd.Short = "cancel build" })
 
 	cmd.AddCommand(workflowCmd, boxCmd, buildCmd)
 	return cmd

@@ -233,11 +233,7 @@ func (h *docker) Step(ctx context.Context, spec *worker.Workflow, step *worker.S
 			return nil, context.Canceled
 		}
 		log.With("error", err).Error("container wait error")
-	case wait := <-waitCh:
-		log.With(
-			"statusCode", wait.StatusCode,
-			"container", step.ID,
-		).Debug("container wait response")
+	case <-waitCh:
 	}
 
 	info, err := h.client.ContainerInspect(ctx, step.ID)
