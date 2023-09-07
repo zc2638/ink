@@ -108,6 +108,10 @@ func (s *Step) CombineEnv(env ...any) map[string]string {
 			}
 		}
 	}
+
+	for _, secret := range s.Secrets {
+		out[secret.Name] = secret.Data
+	}
 	return out
 }
 

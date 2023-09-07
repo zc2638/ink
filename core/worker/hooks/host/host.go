@@ -91,11 +91,6 @@ func (h *host) Step(ctx context.Context, spec *worker.Workflow, step *worker.Ste
 	cmd.Stdout = writer
 	cmd.Stderr = writer
 
-	//for _, secret := range step.Secrets {
-	//	s := fmt.Sprintf("%s=%s", secret.Env, string(secret.Data))
-	//	cmd.Env = append(cmd.Env, s)
-	//}
-
 	err := cmd.Start()
 	if err != nil {
 		return nil, err

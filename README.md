@@ -8,7 +8,6 @@ Controllable CICD service
 
 - Add the worker for kubernetes.
 - Support docker image pull auth for registry.
-- Support secret.
 - Add more storage backend support, like MySQL and Postgres.
 - Support setting mode.
 
