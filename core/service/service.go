@@ -43,4 +43,12 @@ type (
 		Create(ctx context.Context, namespace, name string) (uint64, error)
 		Cancel(ctx context.Context, namespace, name string, number uint64) error
 	}
+
+	Secret interface {
+		List(ctx context.Context, namespace string) ([]*v1.Secret, error)
+		Info(ctx context.Context, namespace, name string) (*v1.Secret, error)
+		Create(ctx context.Context, data *v1.Secret) error
+		Update(ctx context.Context, data *v1.Secret) error
+		Delete(ctx context.Context, namespace, name string) error
+	}
 )

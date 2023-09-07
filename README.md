@@ -9,6 +9,7 @@ Controllable CICD service
 - Support docker image pull auth for registry.
 - Support secret.
 - Add more storage backend support, like MySQL and Postgres.
+- Support setting mode.
 
 ## Setup
 

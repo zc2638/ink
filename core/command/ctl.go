@@ -58,6 +58,10 @@ func NewCtl() *cobra.Command {
 			"that contains the configuration to exec"),
 	)
 
+	secretCmd := &cobra.Command{Use: "secret", Short: "secret operation"}
+	Register(secretCmd, "list", "list secrets", secretList)
+	Register(secretCmd, "delete", "delete secret", secretDelete)
+
 	workflowCmd := &cobra.Command{Use: "workflow", Short: "workflow operation"}
 	Register(workflowCmd, "get", "get workflow info", workflowGet, workflowGetExample)
 	Register(workflowCmd, "list", "list workflows", workflowList, workflowListExample)
@@ -77,6 +81,43 @@ func NewCtl() *cobra.Command {
 
 	cmd.AddCommand(workflowCmd, boxCmd, buildCmd)
 	return cmd
+}
+
+func secretList(cmd *cobra.Command, _ []string) error {
+	sc, err := newServerClient(cmd)
+	if err != nil {
+		return err
+	}
+	result, err := sc.SecretList(context.Background())
+	if err != nil {
+		return err
+	}
+
+	if len(result) == 0 {
+		writeString("No resources found.")
+		return nil
+	}
+
+	t := printer.NewTab("NAMESPACE", "NAME", "AGE")
+	for _, v := range result {
+		since := time.Since(v.Creation).Round(time.Second)
+		t.Add(v.GetNamespace(), v.GetName(), since.String())
+	}
+	t.Print()
+	return nil
+}
+
+func secretDelete(cmd *cobra.Command, args []string) error {
+	namespace, name, err := getNN(args)
+	if err != nil {
+		return err
+	}
+
+	sc, err := newServerClient(cmd)
+	if err != nil {
+		return err
+	}
+	return sc.SecretDelete(context.Background(), namespace, name)
 }
 
 func workflowGet(cmd *cobra.Command, args []string) error {
@@ -319,7 +360,25 @@ func apply(cmd *cobra.Command, _ []string) error {
 
 	ctx := context.Background()
 
-	// TODO kind Secret
+	for _, obj := range objSet[v1.KindSecret] {
+		var data v1.Secret
+		if err := obj.ToObject(&data); err != nil {
+			return err
+		}
+		_, err := sc.SecretInfo(ctx, data.GetNamespace(), data.GetName())
+		if err == nil {
+			if err = sc.SecretUpdate(ctx, &data); err == nil {
+				writeString(fmt.Sprintf("Update: %s", data.Metadata.String()))
+			}
+		} else if errors.Is(err, constant.ErrNoRecord) {
+			if err = sc.SecretCreate(ctx, &data); err == nil {
+				writeString(fmt.Sprintf("Create: %s", data.Metadata.String()))
+			}
+		}
+		if err != nil {
+			return err
+		}
+	}
 	for _, obj := range objSet[v1.KindWorkflow] {
 		var data v1.Workflow
 		if err := obj.ToObject(&data); err != nil {

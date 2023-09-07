@@ -47,14 +47,6 @@ func (s *Secret) TableName() string {
 	return "secrets"
 }
 
-type Workflow struct {
-	Model
-
-	Namespace string
-	Name      string
-	Data      string
-}
-
 func (s *Secret) FromAPI(in *v1.Secret) error {
 	s.Namespace = in.GetNamespace()
 	s.Name = in.GetName()
@@ -75,6 +67,14 @@ func (s *Secret) ToAPI() (*v1.Secret, error) {
 	out.Name = s.Name
 	out.Creation = s.CreatedAt
 	return &out, nil
+}
+
+type Workflow struct {
+	Model
+
+	Namespace string
+	Name      string
+	Data      string
 }
 
 func (s *Workflow) TableName() string {

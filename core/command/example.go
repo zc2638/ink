@@ -20,6 +20,22 @@ func (s Example) String() string {
 	return string(s)
 }
 
+const secretListExample Example = `
+# List secrets
+inkctl secret list
+`
+
+const secretDeleteExample Example = `
+# Definition
+inkctl secret delete {namespace}/{name}
+
+# Delete a secret
+inkctl secret delete default/test
+
+# Delete secret with default namespace
+inkctl secret delete test
+`
+
 const workflowListExample Example = `
 # List workflows (default size: 10)
 inkctl workflow list

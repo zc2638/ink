@@ -34,6 +34,12 @@ type Server interface {
 }
 
 type ServerV1 interface {
+	SecretList(ctx context.Context) ([]*v1.Secret, error)
+	SecretInfo(ctx context.Context, namespace, name string) (*v1.Secret, error)
+	SecretCreate(ctx context.Context, data *v1.Secret) error
+	SecretUpdate(ctx context.Context, data *v1.Secret) error
+	SecretDelete(ctx context.Context, namespace, name string) error
+
 	WorkflowList(ctx context.Context, page v1.Pagination) ([]*v1.Workflow, *v1.Pagination, error)
 	WorkflowInfo(ctx context.Context, namespace, name string) (*v1.Workflow, error)
 	WorkflowCreate(ctx context.Context, data *v1.Workflow) error
@@ -78,6 +84,52 @@ type serverV1 struct {
 
 func (c *serverV1) R(ctx context.Context) *resty.Request {
 	return c.rc.R().SetContext(ctx)
+}
+
+func (c *serverV1) SecretList(ctx context.Context) ([]*v1.Secret, error) {
+	var result []*v1.Secret
+	req := c.R(ctx).SetResult(&result)
+	resp, err := req.Get("/secret")
+	if err := handleClientError(resp, err); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (c *serverV1) SecretInfo(ctx context.Context, namespace, name string) (*v1.Secret, error) {
+	var result v1.Secret
+	req := c.R(ctx).
+		SetPathParam("namespace", namespace).
+		SetPathParam("name", name).
+		SetResult(&result)
+	resp, err := req.Get("/secret/{namespace}/{name}")
+	if err := handleClientError(resp, err); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (c *serverV1) SecretCreate(ctx context.Context, data *v1.Secret) error {
+	req := c.R(ctx).SetBody(data)
+	resp, err := req.Post("/secret")
+	return handleClientError(resp, err)
+}
+
+func (c *serverV1) SecretUpdate(ctx context.Context, data *v1.Secret) error {
+	req := c.R(ctx).
+		SetBody(data).
+		SetPathParam("namespace", data.GetNamespace()).
+		SetPathParam("name", data.GetName())
+	resp, err := req.Put("/secret/{namespace}/{name}")
+	return handleClientError(resp, err)
+}
+
+func (c *serverV1) SecretDelete(ctx context.Context, namespace, name string) error {
+	req := c.R(ctx).
+		SetPathParam("namespace", namespace).
+		SetPathParam("name", name)
+	resp, err := req.Delete("/secret/{namespace}/{name}")
+	return handleClientError(resp, err)
 }
 
 func (c *serverV1) WorkflowList(ctx context.Context, page v1.Pagination) ([]*v1.Workflow, *v1.Pagination, error) {

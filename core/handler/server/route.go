@@ -21,6 +21,7 @@ import (
 
 	"github.com/zc2638/ink/core/service/box"
 	"github.com/zc2638/ink/core/service/build"
+	"github.com/zc2638/ink/core/service/secret"
 	"github.com/zc2638/ink/core/service/workflow"
 )
 
@@ -31,6 +32,7 @@ func Handler(middlewares chi.Middlewares) http.Handler {
 	workflowSrv := workflow.New()
 	boxSrv := box.New()
 	buildSrv := build.New()
+	secretSrv := secret.New()
 
 	r.Route("/box", func(r chi.Router) {
 		r.Get("/", boxList(boxSrv))
@@ -62,6 +64,16 @@ func Handler(middlewares chi.Middlewares) http.Handler {
 			r.Get("/", workflowInfo(workflowSrv))
 			r.Put("/", workflowUpdate(workflowSrv))
 			r.Delete("/", workflowDelete(workflowSrv))
+		})
+	})
+
+	r.Route("/secret", func(r chi.Router) {
+		r.Get("/", secretList(secretSrv))
+		r.Post("/", secretCreate(secretSrv))
+		r.Route("/{namespace}/{name}", func(r chi.Router) {
+			r.Get("/", secretInfo(secretSrv))
+			r.Put("/", secretUpdate(secretSrv))
+			r.Delete("/", secretDelete(secretSrv))
 		})
 	})
 	return r
