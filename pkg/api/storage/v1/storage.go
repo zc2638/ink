@@ -159,19 +159,26 @@ func (s *Box) ToAPI() (*v1.Box, error) {
 type Build struct {
 	Model
 
-	BoxID   uint64 `gorm:"column:box_id"`
-	Number  uint64
-	Phase   string
-	Title   string
-	Started int64
-	Stopped int64
+	BoxID    uint64 `gorm:"column:box_id"`
+	Number   uint64
+	Phase    string
+	Title    string
+	Settings string
+	Started  int64
+	Stopped  int64
 }
 
 func (s *Build) TableName() string {
 	return "builds"
 }
 
-func (s *Build) FromAPI(in *v1.Build) {
+func (s *Build) FromAPI(in *v1.Build) error {
+	settings, err := json.Marshal(in.Settings)
+	if err != nil {
+		return err
+	}
+	s.Settings = string(settings)
+
 	s.ID = in.ID
 	s.BoxID = in.BoxID
 	s.Number = in.Number
@@ -179,18 +186,25 @@ func (s *Build) FromAPI(in *v1.Build) {
 	s.Started = in.Started
 	s.Stopped = in.Stopped
 	s.Title = in.Title
+	return nil
 }
 
-func (s *Build) ToAPI() *v1.Build {
-	return &v1.Build{
-		ID:      s.ID,
-		BoxID:   s.BoxID,
-		Number:  s.Number,
-		Phase:   v1.Phase(s.Phase),
-		Title:   s.Title,
-		Started: s.Started,
-		Stopped: s.Stopped,
+func (s *Build) ToAPI() (*v1.Build, error) {
+	settings := make(map[string]string)
+	if err := json.Unmarshal([]byte(s.Settings), &settings); err != nil {
+		return nil, err
 	}
+	result := &v1.Build{
+		ID:       s.ID,
+		BoxID:    s.BoxID,
+		Number:   s.Number,
+		Phase:    v1.Phase(s.Phase),
+		Title:    s.Title,
+		Settings: settings,
+		Started:  s.Started,
+		Stopped:  s.Stopped,
+	}
+	return result, nil
 }
 
 type Stage struct {

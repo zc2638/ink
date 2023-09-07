@@ -15,14 +15,15 @@
 package v1
 
 type Build struct {
-	ID      uint64 `json:"id" yaml:"id"`
-	BoxID   uint64 `json:"boxID" yaml:"boxID"`
-	Number  uint64 `json:"number" yaml:"number"`
-	Phase   Phase  `json:"phase" yaml:"phase"`
-	Title   string `json:"title" yaml:"title"`
-	Message string `json:"message,omitempty" yaml:"message,omitempty"`
-	Started int64  `json:"started,omitempty" yaml:"started,omitempty"`
-	Stopped int64  `json:"stopped,omitempty" yaml:"stopped,omitempty"`
+	ID       uint64            `json:"id" yaml:"id"`
+	BoxID    uint64            `json:"boxID" yaml:"boxID"`
+	Number   uint64            `json:"number" yaml:"number"`
+	Phase    Phase             `json:"phase" yaml:"phase"`
+	Title    string            `json:"title" yaml:"title"`
+	Message  string            `json:"message,omitempty" yaml:"message,omitempty"`
+	Settings map[string]string `json:"settings,omitempty" yaml:"settings,omitempty"`
+	Started  int64             `json:"started,omitempty" yaml:"started,omitempty"`
+	Stopped  int64             `json:"stopped,omitempty" yaml:"stopped,omitempty"`
 
 	Stages []*Stage `json:"stages,omitempty" yaml:"stages,omitempty"`
 }

@@ -128,7 +128,11 @@ func handleInfo() http.HandlerFunc {
 			wrapper.InternalError(w, err)
 			return
 		}
-		build := buildS.ToAPI()
+		build, err := buildS.ToAPI()
+		if err != nil {
+			wrapper.InternalError(w, err)
+			return
+		}
 
 		var stageList []storageV1.Stage
 		if err := db.Where(&storageV1.Stage{BuildID: build.ID}).Find(&stageList).Error; err != nil {

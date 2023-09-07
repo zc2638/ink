@@ -9,7 +9,6 @@ Controllable CICD workflow service
 
 - Add the worker for kubernetes.
 - Add more storage backend support, like MySQL and Postgres.
-- Support setting mode.
 
 ## Setup
 
@@ -75,6 +74,31 @@ spec:
         - cat test.log
         - echo "step3 $STATUS"
         - pwd
+```
+
+#### For setting mode
+
+you can use  
+```
+inkctl box trigger {namespace}/{name} --set key1=abc --set key2=value2
+```
+
+```yaml
+kind: Workflow
+name: test-docker-setting
+namespace: default
+spec:
+  steps:
+    - name: step1
+      image: alpine:3.18
+      settings:
+        - name: key1
+        - name: key2
+          value: default-key2
+          desc: for default key value
+      command:
+        - echo "key1: $key1"
+        - echo "key2: $key2"
 ```
 
 ### Box

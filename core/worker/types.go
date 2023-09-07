@@ -198,6 +198,12 @@ func Convert(in *v1.Workflow, status *v1.Stage, secrets []*v1.Secret) (*Workflow
 				env[ev.Name] = secData
 			}
 		}
+		for _, sv := range v.Settings {
+			if sv.Name == "" || sv.Value == "" {
+				continue
+			}
+			env[sv.Name] = sv.Value
+		}
 		if len(env) > 0 {
 			step.Env = env
 		}

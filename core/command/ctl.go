@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -71,13 +72,15 @@ func NewCtl() *cobra.Command {
 	Register(boxCmd, "get", "get box info", boxGet, boxGetExample)
 	Register(boxCmd, "list", "list boxes", boxList, boxListExample)
 	Register(boxCmd, "delete", "delete box", boxDelete, boxDeleteExample)
-	Register(boxCmd, "trigger", "create a build for box", buildCreate, boxTriggerExample)
+	boxTriggerCmd := Register(boxCmd, "trigger", "create a build for box", buildCreate, boxTriggerExample)
+	boxTriggerCmd.Flags().StringArrayP("set", "s", nil, "setting values to workflow")
 
 	buildCmd := &cobra.Command{Use: "build", Short: "build operation"}
 	Register(buildCmd, "get", "get build info", buildGet, buildGetExample)
 	Register(buildCmd, "list", "list builds", buildList, buildListExample)
 	Register(buildCmd, "cancel", "cancel a build", buildCancel, buildCancelExample)
-	Register(buildCmd, "create", "create a build", buildCreate, buildCreateExample)
+	buildCreateCmd := Register(buildCmd, "create", "create a build", buildCreate, buildCreateExample)
+	buildCreateCmd.Flags().StringArrayP("set", "s", nil, "setting values to workflow")
 
 	cmd.AddCommand(workflowCmd, boxCmd, buildCmd)
 	return cmd
@@ -336,11 +339,24 @@ func buildCreate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	values, err := cmd.Flags().GetStringArray("set")
+	if err != nil {
+		return err
+	}
+	settings := make(map[string]string)
+	for _, v := range values {
+		parts := strings.SplitN(v, "=", 2)
+		if len(parts) < 2 {
+			continue
+		}
+		settings[parts[0]] = parts[1]
+	}
+
 	sc, err := newServerClient(cmd)
 	if err != nil {
 		return err
 	}
-	number, err := sc.BuildCreate(context.Background(), namespace, name)
+	number, err := sc.BuildCreate(context.Background(), namespace, name, settings)
 	if err != nil {
 		return err
 	}

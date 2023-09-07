@@ -40,7 +40,7 @@ type (
 	Build interface {
 		List(ctx context.Context, namespace, name string, page *v1.Pagination) ([]*v1.Build, error)
 		Info(ctx context.Context, namespace, name string, number uint64) (*v1.Build, error)
-		Create(ctx context.Context, namespace, name string) (uint64, error)
+		Create(ctx context.Context, namespace, name string, settings map[string]string) (uint64, error)
 		Cancel(ctx context.Context, namespace, name string, number uint64) error
 	}
 

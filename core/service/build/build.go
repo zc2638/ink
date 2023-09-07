@@ -62,7 +62,10 @@ func (s *srv) List(ctx context.Context, namespace, name string, page *v1.Paginat
 
 	result := make([]*v1.Build, 0, len(list))
 	for _, v := range list {
-		item := v.ToAPI()
+		item, err := v.ToAPI()
+		if err != nil {
+			return nil, err
+		}
 		result = append(result, item)
 	}
 	return result, nil
@@ -86,7 +89,10 @@ func (s *srv) Info(ctx context.Context, namespace, name string, number uint64) (
 	if err := db.Where(buildS).First(buildS).Error; err != nil {
 		return nil, err
 	}
-	build := buildS.ToAPI()
+	build, err := buildS.ToAPI()
+	if err != nil {
+		return nil, err
+	}
 
 	var stageList []storageV1.Stage
 	stageS := &storageV1.Stage{
@@ -116,7 +122,7 @@ func (s *srv) Info(ctx context.Context, namespace, name string, number uint64) (
 	return build, nil
 }
 
-func (s *srv) Create(ctx context.Context, namespace, name string) (uint64, error) {
+func (s *srv) Create(ctx context.Context, namespace, name string, settings map[string]string) (uint64, error) {
 	db := database.FromContext(ctx)
 
 	boxS := &storageV1.Box{
@@ -138,12 +144,15 @@ func (s *srv) Create(ctx context.Context, namespace, name string) (uint64, error
 	}
 
 	build := &v1.Build{
-		BoxID:  box.ID,
-		Number: uint64(buildCount) + 1,
-		Phase:  v1.PhasePending,
+		BoxID:    box.ID,
+		Number:   uint64(buildCount) + 1,
+		Phase:    v1.PhasePending,
+		Settings: settings,
 	}
 	var buildS storageV1.Build
-	buildS.FromAPI(build)
+	if err := buildS.FromAPI(build); err != nil {
+		return 0, err
+	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&buildS).Error; err != nil {
@@ -220,7 +229,10 @@ func (s *srv) Cancel(ctx context.Context, namespace, name string, number uint64)
 	if err := db.Where(buildS).First(buildS).Error; err != nil {
 		return err
 	}
-	build := buildS.ToAPI()
+	build, err := buildS.ToAPI()
+	if err != nil {
+		return err
+	}
 	if build.Phase.IsDone() {
 		return errors.New("already done")
 	}

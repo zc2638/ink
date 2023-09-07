@@ -54,7 +54,7 @@ type ServerV1 interface {
 
 	BuildList(ctx context.Context, namespace, name string, page v1.Pagination) ([]*v1.Build, *v1.Pagination, error)
 	BuildInfo(ctx context.Context, namespace, name string, number uint64) (*v1.Build, error)
-	BuildCreate(ctx context.Context, namespace, name string) (uint64, error)
+	BuildCreate(ctx context.Context, namespace, name string, settings map[string]string) (uint64, error)
 	BuildCancel(ctx context.Context, namespace, name string, number uint64) error
 
 	LogInfo(ctx context.Context, namespace, name string, number, stage, step uint64) ([]*livelog.Line, error)
@@ -270,11 +270,12 @@ func (c *serverV1) BuildInfo(ctx context.Context, namespace, name string, number
 	return &result, nil
 }
 
-func (c *serverV1) BuildCreate(ctx context.Context, namespace, name string) (uint64, error) {
+func (c *serverV1) BuildCreate(ctx context.Context, namespace, name string, settings map[string]string) (uint64, error) {
 	var result uint64
 	req := c.R(ctx).
 		SetPathParam("namespace", namespace).
 		SetPathParam("name", name).
+		SetBody(settings).
 		SetResult(&result)
 	resp, err := req.Post("/box/{namespace}/{name}/build")
 	if err := handleClientError(resp, err); err != nil {

@@ -55,6 +55,13 @@ type Flow struct {
 	DNS             []string       `json:"dns,omitempty" yaml:"dns,omitempty"`
 	DNSSearch       []string       `json:"dnsSearch,omitempty" yaml:"dnsSearch,omitempty"`
 	ExtraHosts      []string       `json:"extraHosts,omitempty" yaml:"extraHosts,omitempty"`
+	Settings        []Setting      `json:"settings,omitempty" yaml:"settings,omitempty"`
+}
+
+type Setting struct {
+	Name  string `json:"name" yaml:"name"`
+	Desc  string `json:"desc,omitempty" yaml:"desc,omitempty"`
+	Value string `json:"value,omitempty" yaml:"value,omitempty"`
 }
 
 type PullPolicy string

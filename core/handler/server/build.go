@@ -15,6 +15,7 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -67,7 +68,12 @@ func buildCreate(buildSrv service.Build) http.HandlerFunc {
 		namespace := wrapper.URLParam(r, "namespace")
 		name := wrapper.URLParam(r, "name")
 
-		number, err := buildSrv.Create(r.Context(), namespace, name)
+		settings := make(map[string]string)
+		if err := json.NewDecoder(r.Body).Decode(&settings); err != nil {
+			wrapper.BadRequest(w, err)
+		}
+
+		number, err := buildSrv.Create(r.Context(), namespace, name, settings)
 		if err != nil {
 			wrapper.InternalError(w, err)
 			return

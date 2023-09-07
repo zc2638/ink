@@ -33,7 +33,7 @@ import (
 	"github.com/zc2638/ink/pkg/utils"
 )
 
-func Register(cmd *cobra.Command, name string, short string, opts ...any) {
+func Register(cmd *cobra.Command, name string, short string, opts ...any) *cobra.Command {
 	subCmd := new(cobra.Command)
 	for _, opt := range opts {
 		v, ok := opt.(*cobra.Command)
@@ -66,6 +66,7 @@ func Register(cmd *cobra.Command, name string, short string, opts ...any) {
 		}
 	}
 	cmd.AddCommand(subCmd)
+	return subCmd
 }
 
 func newServerClient(cmd *cobra.Command) (clients.ServerV1, error) {
