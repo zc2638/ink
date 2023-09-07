@@ -4,7 +4,6 @@ Controllable CICD service
 
 ## TODO
 
-- Add GitHub CI for test and build.
 - Add the worker for kubernetes.
 - Support docker image pull auth for registry.
 - Support secret.

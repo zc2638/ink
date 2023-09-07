@@ -1,9 +1,7 @@
-GOOS ?= linux
-GOARCH ?= amd64
 tag ?= latest
 
 build-%:
-	@GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=0 go build -ldflags="-s -w" -installsuffix cgo -o output/$* ./cmd/$*
+	@CGO_ENABLED=0 go build -ldflags="-s -w" -installsuffix cgo -o output/$* ./cmd/$*
 
 docker-build-%: build-%
 	@docker build --platform $(GOOS)/$(GOARCH) -t zc2638/$* -f build/Dockerfile .

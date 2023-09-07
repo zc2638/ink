@@ -18,7 +18,7 @@ require (
 	github.com/segmentio/ksuid v1.0.4
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.15.0
-	github.com/zc2638/wslog v0.0.0-20230829113207-11af102bf6fb
+	github.com/zc2638/wslog v0.0.0-20230907023703-58d4be1e378f
 	golang.org/x/sync v0.3.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/mysql v1.5.0

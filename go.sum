@@ -1154,10 +1154,10 @@ github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5t
 github.com/yvasiyarov/go-metrics v0.0.0-20140926110328-57bccd1ccd43/go.mod h1:aX5oPXxHm3bOH+xeAttToC8pqch2ScQN/JoXYupl6xs=
 github.com/yvasiyarov/gorelic v0.0.0-20141212073537-a9bba5b9ab50/go.mod h1:NUSPSUX/bi6SeDMUh6brw0nXpxHnc96TguQh0+r/ssA=
 github.com/yvasiyarov/newrelic_platform_go v0.0.0-20140908184405-b21fdbd4370f/go.mod h1:GlGEuHIJweS1mbCqG+7vt2nvWLzLLnRHbXz5JKd/Qbg=
-github.com/zc2638/wslog v0.0.0-20230821114055-e716ae3aa165 h1:LIHAPo9D+x3WU+5AMYeeTEFfBB73hJjvmHIZ55aJXiE=
-github.com/zc2638/wslog v0.0.0-20230821114055-e716ae3aa165/go.mod h1:SXe1Fr+8wvKz4dl9aQ6Lw+YLTo+xVGFAxQctfU2LSd4=
 github.com/zc2638/wslog v0.0.0-20230829113207-11af102bf6fb h1:lqcdg5XzqO8beLgwSf0F64ZvAZlk5Q8MCCpMkSpizZ8=
 github.com/zc2638/wslog v0.0.0-20230829113207-11af102bf6fb/go.mod h1:SXe1Fr+8wvKz4dl9aQ6Lw+YLTo+xVGFAxQctfU2LSd4=
+github.com/zc2638/wslog v0.0.0-20230907023703-58d4be1e378f h1:wrHi2Nz3TyL/hwjhkkqZ4Xuog7VZBFqyehE17kGI/lc=
+github.com/zc2638/wslog v0.0.0-20230907023703-58d4be1e378f/go.mod h1:SXe1Fr+8wvKz4dl9aQ6Lw+YLTo+xVGFAxQctfU2LSd4=
 github.com/zenazn/goji v0.9.0/go.mod h1:7S9M489iMyHBNxwZnk9/EHS098H4/F6TATF2mIxtB1Q=
 gitlab.com/nyarla/go-crypt v0.0.0-20160106005555-d9a5dc2b789b/go.mod h1:T3BPAOm2cqquPa0MKWeNkmOM5RQsRhkrwMWonFMN7fE=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
