@@ -22,8 +22,5 @@ clean:
 	@rm -rf output
 	@echo "clean complete"
 
-test:
-	@go test $(go list ./... | grep -v github.com/zc2638/ink/test)
-
 e2e:
 	@ginkgo -v test/e2e/suite
