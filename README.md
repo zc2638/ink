@@ -1,4 +1,6 @@
 # ink
+![LICENSE](https://img.shields.io/github/license/zc2638/swag.svg?style=flat-square&color=blue)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/zc2638/ink/main.yaml?branch=main&style=flat-square)](https://github.com/zc2638/ink/actions/workflows/main.yaml)
 
 Controllable CICD service
 
