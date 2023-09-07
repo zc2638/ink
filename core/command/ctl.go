@@ -59,8 +59,8 @@ func NewCtl() *cobra.Command {
 	)
 
 	secretCmd := &cobra.Command{Use: "secret", Short: "secret operation"}
-	Register(secretCmd, "list", "list secrets", secretList)
-	Register(secretCmd, "delete", "delete secret", secretDelete)
+	Register(secretCmd, "list", "list secrets", secretList, secretListExample)
+	Register(secretCmd, "delete", "delete secret", secretDelete, secretDeleteExample)
 
 	workflowCmd := &cobra.Command{Use: "workflow", Short: "workflow operation"}
 	Register(workflowCmd, "get", "get workflow info", workflowGet, workflowGetExample)

@@ -58,9 +58,6 @@ func toContainerConfig(spec *worker.Workflow, step *worker.Step) *container.Conf
 		cfg.Cmd = shell.EchoEnvCommand("INK_SCRIPT", cmdName)
 	}
 
-	for _, sec := range step.Secrets {
-		cfg.Env = append(cfg.Env, sec.Name+"="+sec.Data)
-	}
 	if len(step.VolumeMounts) != 0 {
 		cfg.Volumes = toVolumeSet(spec, step)
 	}

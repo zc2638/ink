@@ -18,11 +18,10 @@ import (
 	"context"
 
 	"github.com/zc2638/ink/core/constant"
-	storageV1 "github.com/zc2638/ink/pkg/api/storage/v1"
-	"github.com/zc2638/ink/pkg/database"
-
 	"github.com/zc2638/ink/core/service"
 	v1 "github.com/zc2638/ink/pkg/api/core/v1"
+	storageV1 "github.com/zc2638/ink/pkg/api/storage/v1"
+	"github.com/zc2638/ink/pkg/database"
 )
 
 func New() service.Secret {
@@ -31,7 +30,7 @@ func New() service.Secret {
 
 type srv struct{}
 
-func (s *srv) List(ctx context.Context, namespace string) ([]*v1.Secret, error) {
+func (s *srv) List(ctx context.Context, _ string) ([]*v1.Secret, error) {
 	db := database.FromContext(ctx)
 
 	var list []storageV1.Secret

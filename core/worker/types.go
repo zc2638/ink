@@ -15,6 +15,7 @@
 package worker
 
 import (
+	"encoding/json"
 	"fmt"
 	"maps"
 	"path/filepath"
@@ -55,11 +56,6 @@ func (s *Workflow) GetStep(name string) *Step {
 }
 
 type (
-	Secret struct {
-		Name string
-		Data string
-	}
-
 	Volume struct {
 		v1.Volume
 
@@ -77,11 +73,11 @@ type Step struct {
 	Name            string
 	Image           string
 	ImagePullPolicy v1.PullPolicy
+	ImagePullAuth   string
 	Privileged      bool
 	WorkingDir      string
 	Network         string
 	Env             map[string]string
-	Secrets         []Secret
 	DNS             []string
 	DNSSearch       []string
 	ExtraHosts      []string
@@ -108,10 +104,6 @@ func (s *Step) CombineEnv(env ...any) map[string]string {
 			}
 		}
 	}
-
-	for _, secret := range s.Secrets {
-		out[secret.Name] = secret.Data
-	}
 	return out
 }
 
@@ -135,6 +127,16 @@ func Convert(in *v1.Workflow, status *v1.Stage, secrets []*v1.Secret) (*Workflow
 		out.Volumes = append(out.Volumes, Volume{Volume: v})
 	}
 
+	imagePullSecrets := make([]*v1.Secret, 0)
+	for _, v := range in.Spec.ImagePullSecrets {
+		for _, sv := range secrets {
+			if v == sv.Name {
+				imagePullSecrets = append(imagePullSecrets, sv)
+				break
+			}
+		}
+	}
+
 	for _, v := range in.Spec.Steps {
 		var id string
 		for _, vv := range status.Steps {
@@ -145,6 +147,40 @@ func Convert(in *v1.Workflow, status *v1.Stage, secrets []*v1.Secret) (*Workflow
 		}
 		if id == "" {
 			return nil, fmt.Errorf("step not found: %s", v.Name)
+		}
+
+		step := &Step{
+			ID:              completeID(id),
+			Name:            v.Name,
+			Image:           v.Image,
+			ImagePullPolicy: v.ImagePullPolicy,
+			Privileged:      v.Privileged,
+			WorkingDir:      v.WorkingDir,
+			Entrypoint:      v.Entrypoint,
+			Shell:           v.Shell,
+			Command:         v.Command,
+			Args:            v.Args,
+			VolumeMounts:    v.VolumeMounts,
+			Devices:         v.Devices,
+			DNS:             v.DNS,
+			DNSSearch:       v.DNSSearch,
+			ExtraHosts:      v.ExtraHosts,
+		}
+
+		// image registry auth
+		for _, sv := range imagePullSecrets {
+			_ = sv.Decrypt()
+			dockerAuthsData, ok := sv.Data[v1.DockerConfigJSONKey]
+			if !ok {
+				continue
+			}
+
+			var dockerAuths v1.DockerAuths
+			if err := json.Unmarshal([]byte(dockerAuthsData), &dockerAuths); err != nil {
+				continue
+			}
+			step.ImagePullAuth = dockerAuths.Match(v.Image)
+			break
 		}
 
 		env := make(map[string]string)
@@ -158,29 +194,14 @@ func Convert(in *v1.Workflow, status *v1.Stage, secrets []*v1.Secret) (*Workflow
 			}
 			// secret to env
 			if ev.ValueFrom != nil && ev.ValueFrom.SecretKeyRef != nil {
-				secValue := ev.ValueFrom.SecretKeyRef.Find(secrets)
-				env[ev.Name] = secValue
+				_, secData := ev.ValueFrom.SecretKeyRef.Find(secrets)
+				env[ev.Name] = secData
 			}
 		}
-
-		out.Steps = append(out.Steps, &Step{
-			ID:              completeID(id),
-			Name:            v.Name,
-			Image:           v.Image,
-			ImagePullPolicy: v.ImagePullPolicy,
-			Privileged:      v.Privileged,
-			WorkingDir:      v.WorkingDir,
-			Env:             env,
-			Entrypoint:      v.Entrypoint,
-			Shell:           v.Shell,
-			Command:         v.Command,
-			Args:            v.Args,
-			VolumeMounts:    v.VolumeMounts,
-			Devices:         v.Devices,
-			DNS:             v.DNS,
-			DNSSearch:       v.DNSSearch,
-			ExtraHosts:      v.ExtraHosts,
-		})
+		if len(env) > 0 {
+			step.Env = env
+		}
+		out.Steps = append(out.Steps, step)
 	}
 
 	Compile(out)

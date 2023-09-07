@@ -1,13 +1,13 @@
 # ink
+
 ![LICENSE](https://img.shields.io/github/license/zc2638/swag.svg?style=flat-square&color=blue)
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/zc2638/ink/main.yaml?branch=main&style=flat-square)](https://github.com/zc2638/ink/actions/workflows/main.yaml)
 
-Controllable CICD service
+Controllable CICD workflow service
 
 ## TODO
 
 - Add the worker for kubernetes.
-- Support docker image pull auth for registry.
 - Add more storage backend support, like MySQL and Postgres.
 - Support setting mode.
 
@@ -107,4 +107,21 @@ namespace: default
 data:
   secret1: secret1abc123
   secret2: this is secret2
+```
+
+#### For imagePullSecrets
+
+```yaml
+kind: Secret
+name: image-pull-auth-secret
+namespace: default
+data:
+  .dockerconfigjson: |
+    {
+      "auths": {
+        "index.docker.io": {
+          "auth": "bmFtZTpwd2Q="
+        }
+      }
+    }
 ```

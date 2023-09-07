@@ -1,4 +1,5 @@
 tag ?= latest
+packages = `go list ./... | grep -v github.com/zc2638/ink/test`
 
 build-%:
 	@CGO_ENABLED=0 go build -ldflags="-s -w" -installsuffix cgo -o output/$* ./cmd/$*
@@ -21,6 +22,9 @@ docker-push:  docker-push-inkd  docker-push-inker  docker-push-inkctl
 clean:
 	@rm -rf output
 	@echo "clean complete"
+
+tests:
+	@go test $(packages)
 
 e2e:
 	@ginkgo -v test/e2e/suite

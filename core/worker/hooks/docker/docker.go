@@ -161,16 +161,9 @@ func (h *docker) Step(ctx context.Context, spec *worker.Workflow, step *worker.S
 
 	image := ImageExpand(step.Image)
 	isLatest := strings.HasSuffix(image, ":latest")
-	pullOpts := types.ImagePullOptions{}
-
-	// TODO docker registry auth
-	//authMap := map[string]string{
-	//	"username": "",
-	//	"password": "",
-	//}
-	//buf, _ := json.Marshal(&authMap)
-	//authStr := base64.URLEncoding.EncodeToString(buf)
-	//pullopts.RegistryAuth = authStr
+	pullOpts := types.ImagePullOptions{
+		RegistryAuth: step.ImagePullAuth,
+	}
 
 	if step.ImagePullPolicy == v1.PullIfNotPresent {
 		var imageExist bool

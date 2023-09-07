@@ -30,12 +30,13 @@ func (w *Workflow) Worker() *Worker {
 }
 
 type WorkflowSpec struct {
-	Steps       []Flow   `json:"steps" yaml:"steps"`
-	WorkingDir  string   `json:"workingDir,omitempty" yaml:"workingDir,omitempty"`
-	Concurrency int      `json:"concurrency,omitempty" yaml:"concurrency,omitempty"`
-	Volumes     []Volume `json:"volumes,omitempty" yaml:"volumes,omitempty"`
-	DependsOn   []string `json:"dependsOn,omitempty" yaml:"dependsOn,omitempty"`
-	Worker      *Worker  `json:"worker,omitempty" yaml:"worker,omitempty"`
+	Steps            []Flow   `json:"steps" yaml:"steps"`
+	WorkingDir       string   `json:"workingDir,omitempty" yaml:"workingDir,omitempty"`
+	Concurrency      int      `json:"concurrency,omitempty" yaml:"concurrency,omitempty"`
+	Volumes          []Volume `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	DependsOn        []string `json:"dependsOn,omitempty" yaml:"dependsOn,omitempty"`
+	ImagePullSecrets []string `json:"imagePullSecrets,omitempty" yaml:"imagePullSecrets,omitempty"`
+	Worker           *Worker  `json:"worker,omitempty" yaml:"worker,omitempty"`
 }
 
 type Flow struct {
@@ -142,13 +143,13 @@ type SecretKeySelector struct {
 	Key string `json:"key" yaml:"key"`
 }
 
-func (s *SecretKeySelector) Find(secrets []*Secret) string {
+func (s *SecretKeySelector) Find(secrets []*Secret) (key string, data string) {
 	for _, v := range secrets {
 		if v.Name != s.Name {
 			continue
 		}
 		_ = v.Decrypt()
-		return v.Data[s.Key]
+		return s.Key, v.Data[s.Key]
 	}
-	return ""
+	return "", ""
 }

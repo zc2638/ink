@@ -20,6 +20,7 @@ func (s Example) String() string {
 	return string(s)
 }
 
+//nolint:gosec
 const secretListExample Example = `
 # List secrets
 inkctl secret list
