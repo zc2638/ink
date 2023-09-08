@@ -91,6 +91,10 @@ type Step struct {
 
 func (s *Step) CombineEnv(env ...any) map[string]string {
 	out := maps.Clone(s.Env)
+	if out == nil {
+		out = make(map[string]string)
+	}
+
 	for _, v := range env {
 		switch value := v.(type) {
 		case map[string]string:

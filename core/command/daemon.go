@@ -56,7 +56,10 @@ func NewDaemon() *cobra.Command {
 			wslog.Infof("Config: %#v", cfg)
 
 			log := wslog.New(cfg.Logger)
-			db, err := database.New(&cfg.Database)
+			if err := database.AutoDatabase(cfg.Database); err != nil {
+				return fmt.Errorf("auto database failed: %v", err)
+			}
+			db, err := database.New(cfg.Database)
 			if err != nil {
 				return fmt.Errorf("init database failed: %v", err)
 			}

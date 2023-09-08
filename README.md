@@ -8,7 +8,7 @@ Controllable CICD workflow service
 ## TODO
 
 - Add the worker for kubernetes.
-- Add more storage backend support, like MySQL and Postgres.
+- Support postgres storage backend.
 
 ## Setup
 

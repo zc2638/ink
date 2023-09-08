@@ -15,15 +15,15 @@
 package v1
 
 type Worker struct {
-	Kind     WorkerKind        `json:"kind,omitempty"`
-	Labels   map[string]string `json:"labels,omitempty"`
-	Platform *Platform         `json:"platform,omitempty"`
+	Kind     WorkerKind        `json:"kind,omitempty" yaml:"kind,omitempty"`
+	Labels   map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Platform *Platform         `json:"platform,omitempty" yaml:"platform,omitempty"`
 }
 
 // Platform defines the target platform.
 type Platform struct {
-	OS   string `json:"os,omitempty"`
-	Arch string `json:"arch,omitempty"`
+	OS   string `json:"os,omitempty" yaml:"os,omitempty"`
+	Arch string `json:"arch,omitempty" yaml:"arch,omitempty"`
 }
 
 type WorkerKind string

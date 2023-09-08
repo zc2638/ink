@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS `stages`
+(
+    `id`          INTEGER AUTO_INCREMENT,
+    `box_id`      INTEGER      NOT NULL,
+    `build_id`    INTEGER      NOT NULL,
+    `number`      INTEGER      NOT NULL,
+    `phase`       VARCHAR(50)  NOT NULL,
+    `name`        VARCHAR(255) NOT NULL,
+    `worker_name` VARCHAR(255),
+    `worker`      TEXT,
+    `started`     INTEGER,
+    `stopped`     INTEGER,
+    `error`       VARCHAR(1000),
+
+    `created_at`  DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`  DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;

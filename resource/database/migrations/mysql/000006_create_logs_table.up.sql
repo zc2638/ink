@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS `logs`
+(
+    `id`         INTEGER,
+    `data`       MEDIUMBLOB,
+
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
