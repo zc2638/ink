@@ -3,13 +3,14 @@ module github.com/zc2638/ink
 go 1.21.0
 
 require (
-	github.com/99nil/gopkg v0.0.0-20221122121418-f594ef9c9fae
+	github.com/99nil/gopkg v0.0.0-20231116031809-c8b52fe444ee
 	github.com/docker/distribution v2.8.2+incompatible
 	github.com/docker/docker v24.0.5+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/go-chi/chi v1.5.4
 	github.com/go-chi/cors v1.2.1
 	github.com/go-resty/resty/v2 v2.7.0
+	github.com/go-sql-driver/mysql v1.7.1
 	github.com/golang-migrate/migrate/v4 v4.15.2
 	github.com/google/uuid v1.3.0
 	github.com/mitchellh/mapstructure v1.5.0
@@ -19,7 +20,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.15.0
 	github.com/zc2638/wslog v0.0.0-20230907023703-58d4be1e378f
-	golang.org/x/sync v0.3.0
+	golang.org/x/sync v0.5.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/mysql v1.5.0
 	gorm.io/driver/postgres v1.5.0
@@ -32,7 +33,6 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
-	github.com/go-sql-driver/mysql v1.7.1 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect

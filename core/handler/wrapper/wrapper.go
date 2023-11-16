@@ -48,7 +48,7 @@ func ErrorCode(w http.ResponseWriter, status int, v ...any) {
 		err = constant.ErrNoRecord
 	}
 
-	ctr.Logger().Errorln(err)
+	ctr.Logger().Error(err)
 	ctr.JSON(w, err.Error(), status)
 }
 
