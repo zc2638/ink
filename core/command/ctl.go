@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/99nil/gopkg/printer"
 	"github.com/spf13/cobra"
 	"github.com/zc2638/wslog"
 	"golang.org/x/sync/errgroup"
@@ -33,7 +34,6 @@ import (
 	"github.com/zc2638/ink/core/worker/hooks"
 	v1 "github.com/zc2638/ink/pkg/api/core/v1"
 	"github.com/zc2638/ink/pkg/flags"
-	"github.com/zc2638/ink/pkg/printer"
 )
 
 func NewCtl() *cobra.Command {

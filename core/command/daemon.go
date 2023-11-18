@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/99nil/gopkg/server"
 	"github.com/99nil/gopkg/sets"
 	"github.com/spf13/cobra"
 	"github.com/zc2638/wslog"
-	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 
 	"github.com/zc2638/ink/core/constant"
@@ -33,8 +33,6 @@ import (
 	"github.com/zc2638/ink/pkg/database"
 	"github.com/zc2638/ink/pkg/livelog"
 	"github.com/zc2638/ink/pkg/queue"
-	"github.com/zc2638/ink/pkg/server"
-	"github.com/zc2638/ink/pkg/signals"
 	"github.com/zc2638/ink/resource"
 )
 
@@ -74,17 +72,13 @@ func NewDaemon() *cobra.Command {
 
 			sched := scheduler.New(listInCompleteStages(db))
 
-			srv := server.New(cfg.Server)
+			srv := server.New(&cfg.Server)
 			srv.ReadTimeout = 0
 			srv.WriteTimeout = 0
 			srv.Handler = handler.New(log, db, ll, sched)
 			log.Info(fmt.Sprintf("Daemon listen on %s", srv.Addr))
 
-			eg, ctx := errgroup.WithContext(context.Background())
-			eg.Go(func() error { return signals.Exit(ctx) })
-			eg.Go(func() error { return srv.ListenAndServe() })
-			eg.Go(func() error { return server.Shutdown(ctx, srv) })
-			return eg.Wait()
+			return srv.RunAndStop(context.Background())
 		},
 	}
 
