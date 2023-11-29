@@ -2,10 +2,10 @@ tag ?= latest
 packages = `go list ./... | grep -v github.com/zc2638/ink/test`
 
 build-%:
-	@CGO_ENABLED=0 go build -ldflags="-s -w" -installsuffix cgo -o output/$* ./cmd/$*
+	@CGO_ENABLED=0 go build -ldflags="-s -w" -installsuffix cgo -o _output/$* ./cmd/$*
 
 docker-build-%: build-%
-	@docker build --platform $(GOOS)/$(GOARCH) -t zc2638/$* -f build/Dockerfile .
+	@docker build -t zc2638/$* -f docker/$*.dockerfile .
 
 docker-tag-%:
 	@docker tag zc2638/$* zc2638/$*:$(tag)
@@ -20,7 +20,7 @@ docker-tag:   docker-tag-inkd   docker-tag-inker   docker-tag-inkctl
 docker-push:  docker-push-inkd  docker-push-inker  docker-push-inkctl
 
 clean:
-	@rm -rf output
+	@rm -rf _output
 	@echo "clean complete"
 
 tests:
@@ -28,3 +28,9 @@ tests:
 
 e2e:
 	@ginkgo -v test/e2e/suite
+
+up:
+	@docker compose -f docker/compose.yml up
+
+down:
+	@docker compose -f docker/compose.yml down

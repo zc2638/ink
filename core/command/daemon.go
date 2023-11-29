@@ -17,6 +17,8 @@ package command
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/99nil/gopkg/server"
@@ -46,7 +48,10 @@ func NewDaemon() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var cfg DaemonConfig
 			if _, err := ParseConfig(opt.ConfigPath, &cfg, constant.DaemonName, opt.ConfigSubKey); err != nil {
-				return err
+				if _, ok := err.(*os.PathError); !ok {
+					return err
+				}
+				wslog.Warn("Config file not found, use default.")
 			}
 			if err := cfg.Validate(); err != nil {
 				return fmt.Errorf("validate config failed: %v", err)
@@ -102,7 +107,20 @@ type DaemonConfig struct {
 
 func (c *DaemonConfig) Validate() error {
 	if c.Server.Port <= 0 {
-		return fmt.Errorf("server port (%d) is not available", c.Server.Port)
+		c.Server.Port = 2638
+	}
+	if c.Database.Driver == "" {
+		c.Database.Driver = "sqlite3"
+		cacheDir := filepath.Join(os.TempDir(), constant.Name)
+		c.Database.DSN = filepath.Join(cacheDir, "ink.db")
+		if err := os.MkdirAll(cacheDir, os.ModePerm); err != nil {
+			return err
+		}
+	}
+	if c.Livelog.File == nil {
+		c.Livelog.File = &livelog.ConfigFile{
+			Dir: filepath.Join(os.TempDir(), constant.Name, "cache"),
+		}
 	}
 	return nil
 }

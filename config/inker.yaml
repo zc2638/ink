@@ -1,0 +1,7 @@
+logger:
+  level: debug
+workers:
+  - count: 1
+    addr: http://localhost:2678
+    worker:
+      kind: docker

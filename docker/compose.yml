@@ -1,0 +1,65 @@
+version: '3.8'
+name: ink
+
+networks:
+  default:
+    name: ink
+
+services:
+  mysql57:
+    image: mysql:5.7.31
+    restart: always
+    container_name: ink_mysql57
+    hostname: ink_mysql57
+    volumes:
+      - "~/.ink/data/mysql57:/var/lib/mysql"
+    environment:
+      TZ: "Asia/Shanghai"
+      MYSQL_ROOT_PASSWORD: "123456"
+    ports:
+      - "3308:3306"
+    healthcheck:
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "root", "-p123456" ]
+      interval: 10s
+      timeout: 20s
+      retries: 10
+  inkd:
+    image: zc2638/inkd:latest
+    restart: always
+    container_name: inkd
+    hostname: inkd
+    environment:
+      INKD_DATABASE_DRIVER: mysql
+      INKD_DATABASE_DSN: root:123456@tcp(ink_mysql57:3306)/ink
+    ports:
+      - "2678:2678"
+    depends_on:
+      mysql57:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "http://localhost:2678"]
+      interval: 5s
+      timeout: 20s
+      retries: 10
+  inker:
+    image: zc2638/inker:latest
+    restart: always
+    container_name: inker
+    hostname: inker
+    command:
+      - sh
+      - -c
+      - |
+        cat > /work/config/inker.yaml << EOF
+        logger:
+          level: debug
+        workers:
+          - count: 1
+            addr: http://inkd:2678
+            worker:
+              kind: docker
+        EOF
+        inker
+    depends_on:
+      inkd:
+        condition: service_healthy

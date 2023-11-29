@@ -101,6 +101,12 @@ func AutoDatabase(cfg Config) error {
 	if err != nil {
 		return err
 	}
+	sdb, err := db.DB()
+	if err != nil {
+		return err
+	}
+	defer sdb.Close()
+
 	if err := db.Exec(initSQL).Error; err != nil {
 		return fmt.Errorf("create database failed: %v", err)
 	}

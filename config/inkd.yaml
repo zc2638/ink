@@ -1,0 +1,9 @@
+server:
+  port: 2678
+database:
+  driver: sqlite
+  dsn: /tmp/ink.db
+  debug: true
+livelog:
+  file:
+    dir: /tmp/ink_cache

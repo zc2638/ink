@@ -12,7 +12,13 @@ Controllable CICD workflow service
 
 ## Setup
 
-### 一、Source
+### 一、Docker Compose
+
+```shell
+docker compose -f docker/compose.yml up
+```
+
+### 二、Source
 
 #### 1. Run inkd
 
