@@ -91,7 +91,7 @@ func secretList(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	result, err := sc.SecretList(context.Background())
+	result, err := sc.SecretList(context.Background(), v1.AllNamespace)
 	if err != nil {
 		return err
 	}
@@ -150,7 +150,7 @@ func workflowList(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	result, _, err := sc.WorkflowList(context.Background(), *getPage(cmd))
+	result, _, err := sc.WorkflowList(context.Background(), v1.AllNamespace, *getPage(cmd))
 	if err != nil {
 		return err
 	}
@@ -209,7 +209,7 @@ func boxList(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	result, _, err := sc.BoxList(context.Background(), *getPage(cmd))
+	result, _, err := sc.BoxList(context.Background(), v1.AllNamespace, *getPage(cmd))
 	if err != nil {
 		return err
 	}

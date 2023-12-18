@@ -30,13 +30,16 @@ func New() service.Workflow {
 
 type srv struct{}
 
-func (s *srv) List(ctx context.Context, page *v1.Pagination) ([]*v1.Workflow, error) {
+func (s *srv) List(ctx context.Context, namespace string, page *v1.Pagination) ([]*v1.Workflow, error) {
 	db := database.FromContext(ctx)
 
 	var (
 		list  []storageV1.Workflow
 		total int64
 	)
+	if len(namespace) > 0 {
+		db = db.Where("namespace = ?", namespace)
+	}
 	if err := db.Model(&storageV1.Workflow{}).Count(&total).Error; err != nil {
 		return nil, err
 	}

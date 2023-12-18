@@ -36,6 +36,7 @@ func Handler(middlewares chi.Middlewares) http.Handler {
 
 	r.Route("/box", func(r chi.Router) {
 		r.Get("/", boxList(boxSrv))
+		r.Get("/{namespace}", boxList(boxSrv))
 		r.Post("/", boxCreate(boxSrv))
 
 		r.Route("/{namespace}/{name}", func(r chi.Router) {
@@ -59,6 +60,7 @@ func Handler(middlewares chi.Middlewares) http.Handler {
 
 	r.Route("/workflow", func(r chi.Router) {
 		r.Get("/", workflowList(workflowSrv))
+		r.Get("/{namespace}", workflowList(workflowSrv))
 		r.Post("/", workflowCreate(workflowSrv))
 		r.Route("/{namespace}/{name}", func(r chi.Router) {
 			r.Get("/", workflowInfo(workflowSrv))
@@ -69,6 +71,7 @@ func Handler(middlewares chi.Middlewares) http.Handler {
 
 	r.Route("/secret", func(r chi.Router) {
 		r.Get("/", secretList(secretSrv))
+		r.Get("/{namespace}", secretList(secretSrv))
 		r.Post("/", secretCreate(secretSrv))
 		r.Route("/{namespace}/{name}", func(r chi.Router) {
 			r.Get("/", secretInfo(secretSrv))

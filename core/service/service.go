@@ -22,7 +22,7 @@ import (
 
 type (
 	Workflow interface {
-		List(ctx context.Context, page *v1.Pagination) ([]*v1.Workflow, error)
+		List(ctx context.Context, namespace string, page *v1.Pagination) ([]*v1.Workflow, error)
 		Info(ctx context.Context, namespace, name string) (*v1.Workflow, error)
 		Create(ctx context.Context, data *v1.Workflow) error
 		Update(ctx context.Context, data *v1.Workflow) error
@@ -30,7 +30,7 @@ type (
 	}
 
 	Box interface {
-		List(ctx context.Context, page *v1.Pagination) ([]*v1.Box, error)
+		List(ctx context.Context, namespace string, page *v1.Pagination) ([]*v1.Box, error)
 		Info(ctx context.Context, namespace, name string) (*v1.Box, error)
 		Create(ctx context.Context, data *v1.Box) error
 		Update(ctx context.Context, data *v1.Box) error

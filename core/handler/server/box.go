@@ -27,9 +27,10 @@ import (
 
 func boxList(boxSrv service.Box) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		namespace := wrapper.URLParam(r, "namespace")
 		page := v1.GetPagination(r)
 
-		result, err := boxSrv.List(r.Context(), page)
+		result, err := boxSrv.List(r.Context(), namespace, page)
 		if err != nil {
 			wrapper.InternalError(w, err)
 			return

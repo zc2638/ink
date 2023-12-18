@@ -34,19 +34,19 @@ type Server interface {
 }
 
 type ServerV1 interface {
-	SecretList(ctx context.Context) ([]*v1.Secret, error)
+	SecretList(ctx context.Context, namespace string) ([]*v1.Secret, error)
 	SecretInfo(ctx context.Context, namespace, name string) (*v1.Secret, error)
 	SecretCreate(ctx context.Context, data *v1.Secret) error
 	SecretUpdate(ctx context.Context, data *v1.Secret) error
 	SecretDelete(ctx context.Context, namespace, name string) error
 
-	WorkflowList(ctx context.Context, page v1.Pagination) ([]*v1.Workflow, *v1.Pagination, error)
+	WorkflowList(ctx context.Context, namespace string, page v1.Pagination) ([]*v1.Workflow, *v1.Pagination, error)
 	WorkflowInfo(ctx context.Context, namespace, name string) (*v1.Workflow, error)
 	WorkflowCreate(ctx context.Context, data *v1.Workflow) error
 	WorkflowUpdate(ctx context.Context, data *v1.Workflow) error
 	WorkflowDelete(ctx context.Context, namespace, name string) error
 
-	BoxList(ctx context.Context, page v1.Pagination) ([]*v1.Box, *v1.Pagination, error)
+	BoxList(ctx context.Context, namespace string, page v1.Pagination) ([]*v1.Box, *v1.Pagination, error)
 	BoxInfo(ctx context.Context, namespace, name string) (*v1.Box, error)
 	BoxCreate(ctx context.Context, data *v1.Box) error
 	BoxUpdate(ctx context.Context, data *v1.Box) error
@@ -86,10 +86,12 @@ func (c *serverV1) R(ctx context.Context) *resty.Request {
 	return c.rc.R().SetContext(ctx)
 }
 
-func (c *serverV1) SecretList(ctx context.Context) ([]*v1.Secret, error) {
+func (c *serverV1) SecretList(ctx context.Context, namespace string) ([]*v1.Secret, error) {
 	var result []*v1.Secret
-	req := c.R(ctx).SetResult(&result)
-	resp, err := req.Get("/secret")
+	req := c.R(ctx).
+		SetPathParam("namespace", namespace).
+		SetResult(&result)
+	resp, err := req.Get("/secret/{namespace}")
 	if err := handleClientError(resp, err); err != nil {
 		return nil, err
 	}
@@ -132,7 +134,7 @@ func (c *serverV1) SecretDelete(ctx context.Context, namespace, name string) err
 	return handleClientError(resp, err)
 }
 
-func (c *serverV1) WorkflowList(ctx context.Context, page v1.Pagination) ([]*v1.Workflow, *v1.Pagination, error) {
+func (c *serverV1) WorkflowList(ctx context.Context, namespace string, page v1.Pagination) ([]*v1.Workflow, *v1.Pagination, error) {
 	type resultT struct {
 		v1.Pagination
 		Items []*v1.Workflow `json:"items"`
@@ -140,8 +142,11 @@ func (c *serverV1) WorkflowList(ctx context.Context, page v1.Pagination) ([]*v1.
 
 	var result resultT
 	vs := page.ToValues()
-	req := c.R(ctx).SetQueryParamsFromValues(vs).SetResult(&result)
-	resp, err := req.Get("/workflow")
+	req := c.R(ctx).
+		SetQueryParamsFromValues(vs).
+		SetPathParam("namespace", namespace).
+		SetResult(&result)
+	resp, err := req.Get("/workflow/{namespace}")
 	if err := handleClientError(resp, err); err != nil {
 		return nil, nil, err
 	}
@@ -184,7 +189,7 @@ func (c *serverV1) WorkflowDelete(ctx context.Context, namespace, name string) e
 	return handleClientError(resp, err)
 }
 
-func (c *serverV1) BoxList(ctx context.Context, page v1.Pagination) ([]*v1.Box, *v1.Pagination, error) {
+func (c *serverV1) BoxList(ctx context.Context, namespace string, page v1.Pagination) ([]*v1.Box, *v1.Pagination, error) {
 	type resultT struct {
 		v1.Pagination
 		Items []*v1.Box `json:"items"`
@@ -192,8 +197,11 @@ func (c *serverV1) BoxList(ctx context.Context, page v1.Pagination) ([]*v1.Box, 
 
 	var result resultT
 	vs := page.ToValues()
-	req := c.R(ctx).SetQueryParamsFromValues(vs).SetResult(&result)
-	resp, err := req.Get("/box")
+	req := c.R(ctx).
+		SetQueryParamsFromValues(vs).
+		SetPathParam("namespace", namespace).
+		SetResult(&result)
+	resp, err := req.Get("/box/{namespace}")
 	if err := handleClientError(resp, err); err != nil {
 		return nil, nil, err
 	}

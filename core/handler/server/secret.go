@@ -27,7 +27,8 @@ import (
 
 func secretList(secretSrv service.Secret) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		result, err := secretSrv.List(r.Context(), "")
+		namespace := wrapper.URLParam(r, "namespace")
+		result, err := secretSrv.List(r.Context(), namespace)
 		if err != nil {
 			wrapper.InternalError(w, err)
 			return

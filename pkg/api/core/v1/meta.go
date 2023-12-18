@@ -19,7 +19,10 @@ import (
 	"time"
 )
 
-const DefaultNamespace = "default"
+const (
+	DefaultNamespace = "default"
+	AllNamespace     = ""
+)
 
 const (
 	KindBox      = "Box"

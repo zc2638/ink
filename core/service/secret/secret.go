@@ -30,10 +30,13 @@ func New() service.Secret {
 
 type srv struct{}
 
-func (s *srv) List(ctx context.Context, _ string) ([]*v1.Secret, error) {
+func (s *srv) List(ctx context.Context, namespace string) ([]*v1.Secret, error) {
 	db := database.FromContext(ctx)
 
 	var list []storageV1.Secret
+	if len(namespace) > 0 {
+		db = db.Where("namespace = ?", namespace)
+	}
 	if err := db.Find(&list).Error; err != nil {
 		return nil, err
 	}

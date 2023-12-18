@@ -27,8 +27,9 @@ import (
 
 func workflowList(workflowSrv service.Workflow) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		namespace := wrapper.URLParam(r, "namespace")
 		page := v1.GetPagination(r)
-		result, err := workflowSrv.List(r.Context(), page)
+		result, err := workflowSrv.List(r.Context(), namespace, page)
 		if err != nil {
 			wrapper.InternalError(w, err)
 			return
