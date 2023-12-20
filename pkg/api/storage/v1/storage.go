@@ -35,6 +35,21 @@ func (m *Model) GetID() uint64 {
 	return m.ID
 }
 
+type Label struct {
+	ID        int
+	Namespace string
+	Name      string
+	Kind      string
+	Key       string
+	Value     string
+
+	CreatedAt time.Time
+}
+
+func (Label) TableName() string {
+	return "labels"
+}
+
 type Secret struct {
 	Model
 

@@ -40,13 +40,13 @@ type ServerV1 interface {
 	SecretUpdate(ctx context.Context, data *v1.Secret) error
 	SecretDelete(ctx context.Context, namespace, name string) error
 
-	WorkflowList(ctx context.Context, namespace string, page v1.Pagination) ([]*v1.Workflow, *v1.Pagination, error)
+	WorkflowList(ctx context.Context, namespace string, opt v1.ListOption) ([]*v1.Workflow, *v1.Pagination, error)
 	WorkflowInfo(ctx context.Context, namespace, name string) (*v1.Workflow, error)
 	WorkflowCreate(ctx context.Context, data *v1.Workflow) error
 	WorkflowUpdate(ctx context.Context, data *v1.Workflow) error
 	WorkflowDelete(ctx context.Context, namespace, name string) error
 
-	BoxList(ctx context.Context, namespace string, page v1.Pagination) ([]*v1.Box, *v1.Pagination, error)
+	BoxList(ctx context.Context, namespace string, opt v1.ListOption) ([]*v1.Box, *v1.Pagination, error)
 	BoxInfo(ctx context.Context, namespace, name string) (*v1.Box, error)
 	BoxCreate(ctx context.Context, data *v1.Box) error
 	BoxUpdate(ctx context.Context, data *v1.Box) error
@@ -134,16 +134,15 @@ func (c *serverV1) SecretDelete(ctx context.Context, namespace, name string) err
 	return handleClientError(resp, err)
 }
 
-func (c *serverV1) WorkflowList(ctx context.Context, namespace string, page v1.Pagination) ([]*v1.Workflow, *v1.Pagination, error) {
+func (c *serverV1) WorkflowList(ctx context.Context, namespace string, opt v1.ListOption) ([]*v1.Workflow, *v1.Pagination, error) {
 	type resultT struct {
 		v1.Pagination
 		Items []*v1.Workflow `json:"items"`
 	}
 
 	var result resultT
-	vs := page.ToValues()
 	req := c.R(ctx).
-		SetQueryParamsFromValues(vs).
+		SetQueryParamsFromValues(opt.ToValues()).
 		SetPathParam("namespace", namespace).
 		SetResult(&result)
 	resp, err := req.Get("/workflow/{namespace}")
@@ -189,16 +188,15 @@ func (c *serverV1) WorkflowDelete(ctx context.Context, namespace, name string) e
 	return handleClientError(resp, err)
 }
 
-func (c *serverV1) BoxList(ctx context.Context, namespace string, page v1.Pagination) ([]*v1.Box, *v1.Pagination, error) {
+func (c *serverV1) BoxList(ctx context.Context, namespace string, opt v1.ListOption) ([]*v1.Box, *v1.Pagination, error) {
 	type resultT struct {
 		v1.Pagination
 		Items []*v1.Box `json:"items"`
 	}
 
 	var result resultT
-	vs := page.ToValues()
 	req := c.R(ctx).
-		SetQueryParamsFromValues(vs).
+		SetQueryParamsFromValues(opt.ToValues()).
 		SetPathParam("namespace", namespace).
 		SetResult(&result)
 	resp, err := req.Get("/box/{namespace}")

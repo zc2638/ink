@@ -29,7 +29,10 @@ func workflowList(workflowSrv service.Workflow) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		namespace := wrapper.URLParam(r, "namespace")
 		page := v1.GetPagination(r)
-		result, err := workflowSrv.List(r.Context(), namespace, page)
+		result, err := workflowSrv.List(r.Context(), namespace, v1.ListOption{
+			Pagination:    *page,
+			LabelSelector: r.URL.Query().Get("labelSelector"),
+		})
 		if err != nil {
 			wrapper.InternalError(w, err)
 			return

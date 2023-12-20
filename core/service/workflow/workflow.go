@@ -19,6 +19,7 @@ import (
 
 	"github.com/zc2638/ink/core/constant"
 	"github.com/zc2638/ink/core/service"
+	"github.com/zc2638/ink/core/service/common"
 	v1 "github.com/zc2638/ink/pkg/api/core/v1"
 	storageV1 "github.com/zc2638/ink/pkg/api/storage/v1"
 	"github.com/zc2638/ink/pkg/database"
@@ -30,22 +31,29 @@ func New() service.Workflow {
 
 type srv struct{}
 
-func (s *srv) List(ctx context.Context, namespace string, page *v1.Pagination) ([]*v1.Workflow, error) {
+func (s *srv) List(ctx context.Context, namespace string, opt v1.ListOption) ([]*v1.Workflow, error) {
 	db := database.FromContext(ctx)
 
-	var (
-		list  []storageV1.Workflow
-		total int64
-	)
+	labels := opt.Labels()
+	if len(labels) > 0 {
+		names, err := common.SelectNamesByLabels(ctx, v1.KindWorkflow, namespace, labels)
+		if err != nil {
+			return nil, err
+		}
+		if len(names) == 0 {
+			return nil, nil
+		}
+		db = db.Where("name in (?)", names)
+	}
 	if len(namespace) > 0 {
 		db = db.Where("namespace = ?", namespace)
 	}
-	if err := db.Model(&storageV1.Workflow{}).Count(&total).Error; err != nil {
+	if err := db.Model(&storageV1.Workflow{}).Count(&opt.Pagination.Total).Error; err != nil {
 		return nil, err
 	}
-	page.SetTotal(total)
 
-	if err := db.Scopes(page.Scope).Find(&list).Error; err != nil {
+	var list []storageV1.Workflow
+	if err := db.Scopes(opt.Pagination.Scope).Find(&list).Error; err != nil {
 		return nil, err
 	}
 

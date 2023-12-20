@@ -150,7 +150,10 @@ func workflowList(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	result, _, err := sc.WorkflowList(context.Background(), v1.AllNamespace, *getPage(cmd))
+	opt := v1.ListOption{
+		Pagination: *getPage(cmd),
+	}
+	result, _, err := sc.WorkflowList(context.Background(), v1.AllNamespace, opt)
 	if err != nil {
 		return err
 	}
@@ -209,7 +212,10 @@ func boxList(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	result, _, err := sc.BoxList(context.Background(), v1.AllNamespace, *getPage(cmd))
+	opt := v1.ListOption{
+		Pagination: *getPage(cmd),
+	}
+	result, _, err := sc.BoxList(context.Background(), v1.AllNamespace, opt)
 	if err != nil {
 		return err
 	}
