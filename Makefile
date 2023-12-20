@@ -15,9 +15,9 @@ docker-push-%:
 	@docker push zc2638/$*:$(tag)
 
 build: build-inkd build-inker build-inkctl
-docker-build: docker-build-inkd docker-build-inker docker-build-inkctl
-docker-tag:   docker-tag-inkd   docker-tag-inker   docker-tag-inkctl
-docker-push:  docker-push-inkd  docker-push-inker  docker-push-inkctl
+docker-build: docker-build-inkd docker-build-inker
+docker-tag:   docker-tag-inkd   docker-tag-inker
+docker-push:  docker-push-inkd  docker-push-inker
 
 clean:
 	@rm -rf _output
