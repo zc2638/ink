@@ -45,7 +45,7 @@ type (
 	}
 
 	Secret interface {
-		List(ctx context.Context, namespace string) ([]*v1.Secret, error)
+		List(ctx context.Context, namespace string, opt v1.ListOption) ([]*v1.Secret, error)
 		Info(ctx context.Context, namespace, name string) (*v1.Secret, error)
 		Create(ctx context.Context, data *v1.Secret) error
 		Update(ctx context.Context, data *v1.Secret) error

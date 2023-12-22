@@ -17,6 +17,8 @@ package secret
 import (
 	"context"
 
+	"github.com/zc2638/ink/core/service/common"
+
 	"github.com/zc2638/ink/core/constant"
 	"github.com/zc2638/ink/core/service"
 	v1 "github.com/zc2638/ink/pkg/api/core/v1"
@@ -30,14 +32,29 @@ func New() service.Secret {
 
 type srv struct{}
 
-func (s *srv) List(ctx context.Context, namespace string) ([]*v1.Secret, error) {
+func (s *srv) List(ctx context.Context, namespace string, opt v1.ListOption) ([]*v1.Secret, error) {
 	db := database.FromContext(ctx)
 
-	var list []storageV1.Secret
+	labels := opt.Labels()
+	if len(labels) > 0 {
+		names, err := common.SelectNamesByLabels(ctx, v1.KindBox, namespace, labels)
+		if err != nil {
+			return nil, err
+		}
+		if len(names) == 0 {
+			return nil, nil
+		}
+		db = db.Where("name in (?)", names)
+	}
 	if len(namespace) > 0 {
 		db = db.Where("namespace = ?", namespace)
 	}
-	if err := db.Find(&list).Error; err != nil {
+	if err := db.Model(&storageV1.Box{}).Count(&opt.Pagination.Total).Error; err != nil {
+		return nil, err
+	}
+
+	var list []storageV1.Secret
+	if err := db.Scopes(opt.Pagination.Scope).Find(&list).Error; err != nil {
 		return nil, err
 	}
 

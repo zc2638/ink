@@ -34,7 +34,7 @@ type Server interface {
 }
 
 type ServerV1 interface {
-	SecretList(ctx context.Context, namespace string) ([]*v1.Secret, error)
+	SecretList(ctx context.Context, namespace string, opt v1.ListOption) ([]*v1.Secret, *v1.Pagination, error)
 	SecretInfo(ctx context.Context, namespace, name string) (*v1.Secret, error)
 	SecretCreate(ctx context.Context, data *v1.Secret) error
 	SecretUpdate(ctx context.Context, data *v1.Secret) error
@@ -86,16 +86,24 @@ func (c *serverV1) R(ctx context.Context) *resty.Request {
 	return c.rc.R().SetContext(ctx)
 }
 
-func (c *serverV1) SecretList(ctx context.Context, namespace string) ([]*v1.Secret, error) {
-	var result []*v1.Secret
-	req := c.R(ctx).
-		SetPathParam("namespace", namespace).
-		SetResult(&result)
-	resp, err := req.Get("/secret/{namespace}")
-	if err := handleClientError(resp, err); err != nil {
-		return nil, err
+func (c *serverV1) SecretList(ctx context.Context, namespace string, opt v1.ListOption) ([]*v1.Secret, *v1.Pagination, error) {
+	type resultT struct {
+		v1.Pagination
+		Items []*v1.Secret `json:"items"`
 	}
-	return result, nil
+
+	var result resultT
+	uri := "/secret"
+	req := c.R(ctx).SetResult(&result).SetQueryParamsFromValues(opt.ToValues())
+	if len(namespace) > 0 {
+		req.SetPathParam("namespace", namespace)
+		uri += "/{namespace}"
+	}
+	resp, err := req.Get(uri)
+	if err := handleClientError(resp, err); err != nil {
+		return nil, nil, err
+	}
+	return result.Items, &result.Pagination, nil
 }
 
 func (c *serverV1) SecretInfo(ctx context.Context, namespace, name string) (*v1.Secret, error) {
@@ -141,11 +149,13 @@ func (c *serverV1) WorkflowList(ctx context.Context, namespace string, opt v1.Li
 	}
 
 	var result resultT
-	req := c.R(ctx).
-		SetQueryParamsFromValues(opt.ToValues()).
-		SetPathParam("namespace", namespace).
-		SetResult(&result)
-	resp, err := req.Get("/workflow/{namespace}")
+	uri := "/workflow"
+	req := c.R(ctx).SetResult(&result).SetQueryParamsFromValues(opt.ToValues())
+	if len(namespace) > 0 {
+		req.SetPathParam("namespace", namespace)
+		uri += "/{namespace}"
+	}
+	resp, err := req.Get(uri)
 	if err := handleClientError(resp, err); err != nil {
 		return nil, nil, err
 	}
@@ -195,11 +205,13 @@ func (c *serverV1) BoxList(ctx context.Context, namespace string, opt v1.ListOpt
 	}
 
 	var result resultT
-	req := c.R(ctx).
-		SetQueryParamsFromValues(opt.ToValues()).
-		SetPathParam("namespace", namespace).
-		SetResult(&result)
-	resp, err := req.Get("/box/{namespace}")
+	uri := "/box"
+	req := c.R(ctx).SetResult(&result).SetQueryParamsFromValues(opt.ToValues())
+	if len(namespace) > 0 {
+		req.SetPathParam("namespace", namespace)
+		uri += "/{namespace}"
+	}
+	resp, err := req.Get(uri)
 	if err := handleClientError(resp, err); err != nil {
 		return nil, nil, err
 	}
