@@ -97,7 +97,7 @@ func (c *serverV1) SecretList(ctx context.Context, namespace string, opt v1.List
 	req := c.R(ctx).SetResult(&result).SetQueryParamsFromValues(opt.ToValues())
 	if len(namespace) > 0 {
 		req.SetPathParam("namespace", namespace)
-		uri += "/{namespace}"
+		uri = "/secret/{namespace}"
 	}
 	resp, err := req.Get(uri)
 	if err := handleClientError(resp, err); err != nil {
@@ -153,7 +153,7 @@ func (c *serverV1) WorkflowList(ctx context.Context, namespace string, opt v1.Li
 	req := c.R(ctx).SetResult(&result).SetQueryParamsFromValues(opt.ToValues())
 	if len(namespace) > 0 {
 		req.SetPathParam("namespace", namespace)
-		uri += "/{namespace}"
+		uri = "/workflow/{namespace}"
 	}
 	resp, err := req.Get(uri)
 	if err := handleClientError(resp, err); err != nil {
@@ -209,7 +209,7 @@ func (c *serverV1) BoxList(ctx context.Context, namespace string, opt v1.ListOpt
 	req := c.R(ctx).SetResult(&result).SetQueryParamsFromValues(opt.ToValues())
 	if len(namespace) > 0 {
 		req.SetPathParam("namespace", namespace)
-		uri += "/{namespace}"
+		uri = "/box/{namespace}"
 	}
 	resp, err := req.Get(uri)
 	if err := handleClientError(resp, err); err != nil {

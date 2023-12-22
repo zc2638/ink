@@ -91,7 +91,10 @@ func secretList(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	result, err := sc.SecretList(context.Background(), v1.AllNamespace)
+	opt := v1.ListOption{
+		Pagination: *getPage(cmd),
+	}
+	result, _, err := sc.SecretList(context.Background(), v1.AllNamespace, opt)
 	if err != nil {
 		return err
 	}
