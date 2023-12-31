@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/99nil/gopkg/signals"
 	"github.com/spf13/cobra"
 	"github.com/zc2638/wslog"
 	"golang.org/x/sync/errgroup"
@@ -87,6 +88,7 @@ func NewWorker() *cobra.Command {
 			}
 
 			eg, ctx := errgroup.WithContext(context.Background())
+			eg.Go(func() error { return signals.Exit(ctx) })
 			for _, w := range workers {
 				wc := w
 				eg.Go(func() error { return wc.Run(ctx) })

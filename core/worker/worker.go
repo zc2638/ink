@@ -97,6 +97,12 @@ func (w *Worker) Run(ctx context.Context) error {
 						"wait", waitTimes,
 					)
 
+					select {
+					case <-wCtx.Done():
+						return err
+					default:
+					}
+
 					waitSec := math.Pow(2, float64(waitTimes))
 					if waitSec > 60 {
 						waitSec = constant.DefaultWaitTime
