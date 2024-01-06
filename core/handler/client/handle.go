@@ -185,8 +185,11 @@ func handleInfo() http.HandlerFunc {
 			secretNames.Add(v.Name)
 		}
 		var secretList []storageV1.Secret
-		secretS := &storageV1.Secret{Namespace: box.GetNamespace()}
-		if err := db.Where(secretS).Where("name in (?)", secretNames.List()).Find(&secretList).Error; err != nil {
+		secretDB := db.Where(&storageV1.Secret{Namespace: box.GetNamespace()})
+		if !secretNames.Has("") {
+			secretDB = secretDB.Where("name in (?)", secretNames.List())
+		}
+		if err := secretDB.Find(&secretList).Error; err != nil {
 			wrapper.InternalError(w, err)
 			return
 		}
