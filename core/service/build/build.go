@@ -154,15 +154,27 @@ func (s *srv) Create(ctx context.Context, namespace, name string, settings map[s
 		return 0, err
 	}
 
+	workflowNames := make([]string, 0, len(box.Resources))
+	for _, v := range box.Resources {
+		if v.Kind != v1.KindWorkflow {
+			continue
+		}
+		workflowNames = append(workflowNames, v.Name)
+	}
+	if len(workflowNames) == 0 {
+		return 0, errors.New("workflow resource not found")
+	}
+
 	err = db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&buildS).Error; err != nil {
 			return err
 		}
 
-		for k, v := range box.Resources {
+		for k, v := range workflowNames {
+
 			sd := &storageV1.Workflow{
 				Namespace: box.Namespace,
-				Name:      v.Name,
+				Name:      v,
 			}
 			if err := tx.Where(sd).First(sd).Error; err != nil {
 				return err

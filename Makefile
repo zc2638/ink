@@ -4,7 +4,7 @@ packages = `go list ./... | grep -v github.com/zc2638/ink/test`
 build-%:
 	@CGO_ENABLED=0 go build -ldflags="-s -w" -installsuffix cgo -o _output/$* ./cmd/$*
 
-docker-build-%: build-%
+docker-build-%:
 	@docker build -t zc2638/$* -f docker/$*.dockerfile .
 
 docker-tag-%:
