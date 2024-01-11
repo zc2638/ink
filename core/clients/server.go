@@ -22,11 +22,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/99nil/gopkg/sse"
 	"github.com/go-resty/resty/v2"
 
 	v1 "github.com/zc2638/ink/pkg/api/core/v1"
 	"github.com/zc2638/ink/pkg/livelog"
-	"github.com/zc2638/ink/pkg/sse"
 )
 
 type Server interface {

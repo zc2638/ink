@@ -17,13 +17,12 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/99nil/gopkg/ctr"
+	"github.com/99nil/gopkg/sse"
 
 	"github.com/zc2638/ink/core/handler/wrapper"
 	storageV1 "github.com/zc2638/ink/pkg/api/storage/v1"
@@ -106,19 +105,12 @@ func logWatch() http.HandlerFunc {
 			return
 		}
 
-		h := w.Header()
-		h.Set("Content-Type", "text/event-stream")
-		h.Set("Cache-Control", "no-cache")
-		h.Set("Connection", "keep-alive")
-		h.Set("X-Accel-Buffering", "no")
-
-		f, ok := w.(http.Flusher)
-		if !ok {
+		sender, err := sse.NewSender(w)
+		if err != nil {
+			wrapper.InternalError(w, err)
 			return
 		}
-
-		_, _ = io.WriteString(w, ": ping\n\n")
-		f.Flush()
+		sender.Ping()
 
 		ctx, cancel := context.WithCancel(r.Context())
 		defer cancel()
@@ -126,17 +118,14 @@ func logWatch() http.HandlerFunc {
 		ll := livelog.FromRequest(r)
 		lineCh, closeCh, err := ll.Watch(ctx, strconv.FormatUint(stepS.ID, 10))
 		if err != nil {
-			_, _ = fmt.Fprintf(w, "event: error\ndata: %v\n\n", err)
-			f.Flush()
+			sender.SendError("", err)
 			return
 		}
 		if closeCh == nil {
-			_, _ = io.WriteString(w, "event: error\ndata: eof\n\n")
-			f.Flush()
+			sender.Close()
 			return
 		}
 
-		enc := json.NewEncoder(w)
 		pingChan := time.After(30 * time.Second)
 		timeoutChan := time.After(24 * time.Hour)
 	L:
@@ -149,17 +138,19 @@ func logWatch() http.HandlerFunc {
 			case <-timeoutChan:
 				break L
 			case <-pingChan:
-				_, _ = io.WriteString(w, ": ping\n\n")
-				f.Flush()
+				sender.Ping()
 			case line := <-lineCh:
-				_, _ = io.WriteString(w, "event: data\ndata: ")
-				_ = enc.Encode(line)
-				_, _ = io.WriteString(w, "\n\n")
-				f.Flush()
+				data, err := json.Marshal(line)
+				if err != nil {
+					sender.SendError("", err)
+					continue
+				}
+				sender.SendMessage(&sse.Message{
+					Event: "data",
+					Data:  string(data),
+				})
 			}
 		}
-
-		_, _ = io.WriteString(w, "event: error\ndata: eof\n\n")
-		f.Flush()
+		sender.Close()
 	}
 }
