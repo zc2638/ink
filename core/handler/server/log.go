@@ -16,10 +16,9 @@ package server
 
 import (
 	"context"
-	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/99nil/gopkg/ctr"
 	"github.com/99nil/gopkg/sse"
@@ -105,52 +104,35 @@ func logWatch() http.HandlerFunc {
 			return
 		}
 
-		sender, err := sse.NewSender(w)
-		if err != nil {
-			wrapper.InternalError(w, err)
-			return
-		}
-		sender.Ping()
-
 		ctx, cancel := context.WithCancel(r.Context())
 		defer cancel()
 
 		ll := livelog.FromRequest(r)
 		lineCh, closeCh, err := ll.Watch(ctx, strconv.FormatUint(stepS.ID, 10))
 		if err != nil {
-			sender.SendError("", err)
+			wrapper.InternalError(w, err)
 			return
 		}
 		if closeCh == nil {
-			sender.Close()
+			wrapper.InternalError(w, "already closed")
 			return
 		}
 
-		pingChan := time.After(30 * time.Second)
-		timeoutChan := time.After(24 * time.Hour)
-	L:
-		for {
+		sender, err := sse.NewSender(w)
+		if err != nil {
+			wrapper.InternalError(w, err)
+			return
+		}
+
+		errCh := make(chan error)
+		go func() {
 			select {
 			case <-ctx.Done():
-				break L
+			case <-sender.WaitForClose():
 			case <-closeCh:
-				break L
-			case <-timeoutChan:
-				break L
-			case <-pingChan:
-				sender.Ping()
-			case line := <-lineCh:
-				data, err := json.Marshal(line)
-				if err != nil {
-					sender.SendError("", err)
-					continue
-				}
-				sender.SendMessage(&sse.Message{
-					Event: "data",
-					Data:  string(data),
-				})
+				errCh <- io.EOF
 			}
-		}
-		sender.Close()
+		}()
+		_ = sse.SendLoop[*livelog.Line](ctx, sender, lineCh, errCh)
 	}
 }

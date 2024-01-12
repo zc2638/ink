@@ -113,6 +113,7 @@ func NewFile(cfg ConfigFile) (Interface, error) {
 type file struct {
 	dir     string
 	rs      sync.Map
+	mux     sync.Mutex
 	clients map[string]map[*subscriber]struct{}
 }
 
@@ -137,7 +138,9 @@ func (f *file) List(ctx context.Context, id string) ([]*Line, error) {
 }
 
 func (f *file) Watch(ctx context.Context, id string) (<-chan *Line, <-chan struct{}, error) {
+	f.mux.Lock()
 	clients, ok := f.clients[id]
+	f.mux.Unlock()
 	if !ok {
 		return nil, nil, nil
 	}
@@ -178,11 +181,13 @@ func (f *file) Write(ctx context.Context, id string, line *Line) error {
 		return fmt.Errorf("log line write failed: %v", err)
 	}
 
+	f.mux.Lock()
 	clients, ok := f.clients[id]
 	if !ok {
 		f.clients[id] = make(map[*subscriber]struct{})
-		return nil
 	}
+	f.mux.Unlock()
+
 	for client := range clients {
 		client.publish(line)
 	}
@@ -199,13 +204,22 @@ func (f *file) Create(_ context.Context, id string) error {
 	if err != nil {
 		return err
 	}
+
 	fi := &fileItem{file: ff}
 	f.rs.Store(id, fi)
+
+	f.mux.Lock()
+	if _, ok := f.clients[id]; !ok {
+		f.clients[id] = make(map[*subscriber]struct{})
+	}
+	f.mux.Unlock()
 	return nil
 }
 
 func (f *file) Delete(_ context.Context, id string) error {
+	f.mux.Lock()
 	clients, ok := f.clients[id]
+	f.mux.Unlock()
 	if !ok {
 		return nil
 	}
