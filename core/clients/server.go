@@ -21,6 +21,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/99nil/gopkg/sse"
 	"github.com/go-resty/resty/v2"
@@ -74,7 +75,7 @@ type server struct {
 
 func (s *server) V1() ServerV1 {
 	addr := strings.TrimSuffix(s.Address, "/")
-	rc := resty.New().SetBaseURL(addr + "/api/core/v1")
+	rc := resty.New().SetBaseURL(addr + "/api/core/v1").SetTimeout(time.Minute)
 	return &serverV1{rc: rc}
 }
 
@@ -363,7 +364,8 @@ func (c *serverV1) LogWatch(ctx context.Context, namespace, name string, number,
 				if strings.ToLower(message.Data) == "eof" {
 					return io.EOF
 				}
-				return errors.New(message.Data)
+				errCh <- errors.New(message.Data)
+				return nil
 			}
 			if message.Event != "data" {
 				return nil

@@ -18,6 +18,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/99nil/gopkg/ctr"
@@ -102,11 +103,17 @@ func serviceMiddleware(log *wslog.Logger, ll livelog.Interface, sched scheduler.
 	}
 }
 
+var logWatchRe = regexp.MustCompile(`/api/core/.+/box/.+/.+/build/.+/logs/.+/.+`)
+
 func timeoutMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if logWatchRe.MatchString(r.URL.Path) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		ctx, cancel := context.WithTimeout(r.Context(), constant.DefaultHTTPTimeout)
 		defer cancel()
-
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

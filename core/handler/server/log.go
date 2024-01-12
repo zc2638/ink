@@ -16,6 +16,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -114,6 +115,7 @@ func logWatch() http.HandlerFunc {
 			return
 		}
 		if closeCh == nil {
+			// TODO step pending 时 livelog 未创建，导致 close nil 的处理
 			wrapper.InternalError(w, "already closed")
 			return
 		}
@@ -128,9 +130,12 @@ func logWatch() http.HandlerFunc {
 		go func() {
 			select {
 			case <-ctx.Done():
+				fmt.Println("============= Context Done =============")
 			case <-sender.WaitForClose():
+				fmt.Println("============= Sender Done =============")
 			case <-closeCh:
 				errCh <- io.EOF
+				fmt.Println("============= Watch Close =============")
 			}
 		}()
 		_ = sse.SendLoop[*livelog.Line](ctx, sender, lineCh, errCh)

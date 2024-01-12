@@ -82,7 +82,6 @@ func NewDaemon() *cobra.Command {
 			srv.WriteTimeout = 0
 			srv.Handler = handler.New(log, db, ll, sched)
 			log.Info(fmt.Sprintf("Daemon listen on %s", srv.Addr))
-
 			return srv.RunAndStop(context.Background())
 		},
 	}
