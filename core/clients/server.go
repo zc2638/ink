@@ -346,7 +346,10 @@ func (c *serverV1) LogWatch(ctx context.Context, namespace, name string, number,
 	logCh := make(chan *livelog.Line)
 	errCh := make(chan error)
 	go func() {
-		sseParser := sse.NewParser(resp.RawBody())
+		body := resp.RawBody()
+		defer body.Close()
+
+		sseParser := sse.NewParser(body)
 		err = sseParser.ReadEventLoop(func(message *sse.Message, err error) error {
 			select {
 			case <-ctx.Done():

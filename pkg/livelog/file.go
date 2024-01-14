@@ -254,5 +254,9 @@ func (f *file) Delete(_ context.Context, id string) error {
 			return err
 		}
 	}
+
+	f.mux.Lock()
+	delete(f.clients, id)
+	f.mux.Unlock()
 	return nil
 }

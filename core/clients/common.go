@@ -17,9 +17,12 @@ package clients
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/go-resty/resty/v2"
 
@@ -45,11 +48,16 @@ func handleClientError(resp *resty.Response, err error) error {
 		return err
 	}
 	if resp.StatusCode() >= http.StatusBadRequest {
-		body := resp.String()
+		b, err := io.ReadAll(resp.RawBody())
+		if err != nil {
+			return fmt.Errorf("read body error failed: %v", err)
+		}
+		body := strings.TrimSpace(string(b))
 		errStr, err := strconv.Unquote(body)
 		if err != nil {
 			errStr = body
 		}
+
 		switch errStr {
 		case constant.ErrNoRecord.Error():
 			return constant.ErrNoRecord
