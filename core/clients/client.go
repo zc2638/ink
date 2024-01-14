@@ -42,7 +42,7 @@ type WorkerV1 interface {
 	StageEnd(ctx context.Context, stage *v1.Stage) error
 	StepBegin(ctx context.Context, step *v1.Step) error
 	StepEnd(ctx context.Context, step *v1.Step) error
-	LogUpload(ctx context.Context, stepID uint64, lines []*livelog.Line) error
+	LogUpload(ctx context.Context, stepID uint64, lines []*livelog.Line, isAll bool) error
 	WatchCancel(ctx context.Context, buildID uint64) error
 }
 
@@ -174,10 +174,13 @@ func (c *clientV1) StepEnd(ctx context.Context, step *v1.Step) error {
 	return handleClientError(resp, err)
 }
 
-func (c *clientV1) LogUpload(ctx context.Context, stepID uint64, lines []*livelog.Line) error {
+func (c *clientV1) LogUpload(ctx context.Context, stepID uint64, lines []*livelog.Line, isAll bool) error {
 	req := c.R(ctx).
 		SetBody(lines).
 		SetPathParam("step", strconv.FormatUint(stepID, 10))
+	if isAll {
+		req = req.SetQueryParam("all", strconv.FormatBool(true))
+	}
 	resp, err := req.Post("/step/{step}/logs/upload")
 	return handleClientError(resp, err)
 }

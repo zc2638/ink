@@ -20,23 +20,24 @@ import (
 	"time"
 )
 
-func NewWriter(handler func(lines []*Line)) io.WriteCloser {
+func NewWriter(handler func(lines []*Line, isAll bool)) io.WriteCloser {
 	w := &writer{
 		handler: handler,
 		now:     time.Now(),
 		lineCh:  make(chan *Line, 1024),
 		closeCh: make(chan struct{}),
-		readyCh: make(chan struct{}),
+		readyCh: make(chan struct{}, 1),
 	}
 	go w.process()
 	return w
 }
 
 type writer struct {
-	handler func([]*Line)
+	handler func([]*Line, bool)
 
 	num     int
 	now     time.Time
+	index   int
 	lines   []*Line
 	lineCh  chan *Line
 	closeCh chan struct{}
@@ -63,8 +64,12 @@ func (w *writer) Write(p []byte) (n int, err error) {
 
 func (w *writer) Close() error {
 	close(w.closeCh)
-	if w.handler != nil && len(w.lines) > 0 {
-		w.handler(w.lines)
+	lineLen := len(w.lines)
+	if w.handler != nil && lineLen > 0 {
+		if lineLen > w.index {
+			w.handler(w.lines[w.index:], false)
+		}
+		w.handler(w.lines, true)
 	}
 	return nil
 }
@@ -76,14 +81,19 @@ func (w *writer) process() {
 			return
 		case line := <-w.lineCh:
 			w.lines = append(w.lines, line)
-		case <-w.readyCh:
-			<-time.After(time.Second)
-
-			if len(w.lines) > 0 {
-				if w.handler != nil {
-					w.handler(w.lines)
+			if len(w.lines) > w.index {
+				select {
+				case w.readyCh <- struct{}{}:
+				default:
 				}
-				w.lines = make([]*Line, 0)
+			}
+		case <-w.readyCh:
+			lineLen := len(w.lines)
+			if lineLen > w.index {
+				if w.handler != nil {
+					w.handler(w.lines[w.index:], false)
+				}
+				w.index = lineLen
 			}
 		}
 	}

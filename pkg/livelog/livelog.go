@@ -26,6 +26,8 @@ type Interface interface {
 	List(ctx context.Context, id string) ([]*Line, error)
 	Watch(ctx context.Context, id string) (<-chan *Line, <-chan struct{}, error)
 	Write(ctx context.Context, id string, line *Line) error
+	LineCount(ctx context.Context, id string) int
+	Reset(ctx context.Context, id string) error
 	Create(ctx context.Context, id string) error
 	Delete(ctx context.Context, id string) error
 }

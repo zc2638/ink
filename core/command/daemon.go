@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/99nil/gopkg/ctr"
 	"github.com/99nil/gopkg/server"
 	"github.com/99nil/gopkg/sets"
 	"github.com/spf13/cobra"
@@ -59,9 +60,12 @@ func NewDaemon() *cobra.Command {
 			wslog.Infof("Config: %#v", cfg)
 
 			log := wslog.New(cfg.Logger)
+			ctr.SetLog(ctr.CoverKVLog(log))
+
 			if err := database.AutoDatabase(cfg.Database); err != nil {
 				return fmt.Errorf("auto database failed: %v", err)
 			}
+
 			db, err := database.New(cfg.Database)
 			if err != nil {
 				return fmt.Errorf("init database failed: %v", err)
@@ -74,7 +78,6 @@ func NewDaemon() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("init livelog failed: %v", err)
 			}
-
 			sched := scheduler.New(listInCompleteStages(db))
 
 			srv := server.New(&cfg.Server)

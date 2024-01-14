@@ -489,15 +489,32 @@ func handleStepEnd() http.HandlerFunc {
 func handleLogUpload() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		stepID := wrapper.URLParam(r, "step")
+		isAll, _ := strconv.ParseBool(r.URL.Query().Get("all"))
 
 		var lines []*livelog.Line
 		if err := json.NewDecoder(r.Body).Decode(&lines); err != nil {
 			ctr.BadRequest(w, err)
 			return
 		}
+		if len(lines) == 0 {
+			ctr.BadRequest(w, "empty log line")
+			return
+		}
 
 		ctx := r.Context()
-		ll := livelog.FromRequest(r)
+		ll := livelog.FromContext(ctx)
+		lineCount := ll.LineCount(ctx, stepID)
+		if lineCount == len(lines) {
+			ctr.Success(w)
+			return
+		}
+
+		if isAll {
+			if err := ll.Reset(ctx, stepID); err != nil {
+				ctr.InternalError(w, err)
+				return
+			}
+		}
 		for _, line := range lines {
 			if err := ll.Write(ctx, stepID, line); err != nil {
 				ctr.InternalError(w, err)

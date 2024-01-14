@@ -91,7 +91,11 @@ func (c *clientDirect) StepEnd(_ context.Context, _ *v1.Step) error {
 	return nil
 }
 
-func (c *clientDirect) LogUpload(_ context.Context, _ uint64, lines []*livelog.Line) error {
+func (c *clientDirect) LogUpload(_ context.Context, _ uint64, lines []*livelog.Line, isAll bool) error {
+	if isAll {
+		return nil
+	}
+
 	for _, line := range lines {
 		fmt.Print(line.Content)
 	}

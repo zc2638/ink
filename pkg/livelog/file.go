@@ -31,7 +31,8 @@ type ConfigFile struct {
 
 type fileItem struct {
 	sync.Mutex
-	file *os.File
+	file  *os.File
+	count int
 }
 
 func (fi *fileItem) Close() error {
@@ -180,6 +181,7 @@ func (f *file) Write(ctx context.Context, id string, line *Line) error {
 	if err := fi.Write(ctx, b); err != nil {
 		return fmt.Errorf("log line write failed: %v", err)
 	}
+	fi.count++
 
 	f.mux.Lock()
 	clients, ok := f.clients[id]
@@ -192,6 +194,22 @@ func (f *file) Write(ctx context.Context, id string, line *Line) error {
 		client.publish(line)
 	}
 	return nil
+}
+
+func (f *file) LineCount(_ context.Context, id string) int {
+	fi := f.get(id)
+	if fi == nil {
+		return 0
+	}
+	return fi.count
+}
+
+func (f *file) Reset(ctx context.Context, id string) error {
+	fi := f.get(id)
+	if fi == nil {
+		return f.Create(ctx, id)
+	}
+	return fi.file.Truncate(0)
 }
 
 func (f *file) Create(_ context.Context, id string) error {
@@ -223,6 +241,8 @@ func (f *file) Delete(_ context.Context, id string) error {
 	if !ok {
 		return nil
 	}
+
+	// TODO clean clients
 	for client := range clients {
 		client.close()
 	}

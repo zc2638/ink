@@ -232,11 +232,11 @@ func execute(
 			return fmt.Errorf("step(%s) begin request failed: %v", step.Name, err)
 		}
 
-		logHandle := func(lines []*livelog.Line) {
+		logHandle := func(lines []*livelog.Line, isAll bool) {
 			if len(lines) == 0 {
 				return
 			}
-			if err := client.LogUpload(ctx, step.ID, lines); err != nil {
+			if err := client.LogUpload(ctx, step.ID, lines, isAll); err != nil {
 				if errors.Is(ctx.Err(), context.Canceled) {
 					log.Debug("Upload log canceled")
 					return
