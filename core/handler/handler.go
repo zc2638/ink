@@ -55,6 +55,8 @@ var corsOpts = cors.Options{
 
 func New(log *wslog.Logger, db *gorm.DB, ll livelog.Interface, sched scheduler.Interface) http.Handler {
 	apiMiddlewares := chi.Middlewares{
+		middleware.Logger,
+		middleware.Recoverer,
 		cors.New(corsOpts).Handler,
 		serviceMiddleware(log, ll, sched, db),
 		timeoutMiddleware,

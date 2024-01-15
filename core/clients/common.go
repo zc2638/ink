@@ -17,7 +17,6 @@ package clients
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -48,11 +47,14 @@ func handleClientError(resp *resty.Response, err error) error {
 		return err
 	}
 	if resp.StatusCode() >= http.StatusBadRequest {
-		b, err := io.ReadAll(resp.RawBody())
-		if err != nil {
-			return fmt.Errorf("read body error failed: %v", err)
+		body := resp.String()
+		if body == "" {
+			b, err := io.ReadAll(resp.RawBody())
+			if err == nil {
+				body = strings.TrimSpace(string(b))
+			}
 		}
-		body := strings.TrimSpace(string(b))
+
 		errStr, err := strconv.Unquote(body)
 		if err != nil {
 			errStr = body

@@ -17,8 +17,6 @@ package clients
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -343,47 +341,6 @@ func (c *serverV1) LogWatch(ctx context.Context, namespace, name string, number,
 		return nil, nil, err
 	}
 
-	logCh := make(chan *livelog.Line)
-	errCh := make(chan error)
-	go func() {
-		body := resp.RawBody()
-		defer body.Close()
-
-		sseParser := sse.NewParser(body)
-		err = sseParser.ReadEventLoop(func(message *sse.Message, err error) error {
-			select {
-			case <-ctx.Done():
-				return context.Canceled
-			default:
-			}
-			if errors.Is(err, io.EOF) {
-				return nil
-			}
-			if err != nil {
-				return err
-			}
-
-			if message.Event == "error" {
-				if strings.ToLower(message.Data) == "eof" {
-					return io.EOF
-				}
-				errCh <- errors.New(message.Data)
-				return nil
-			}
-			if message.Event != "data" {
-				return nil
-			}
-
-			var line livelog.Line
-			if err := json.Unmarshal([]byte(message.Data), &line); err != nil {
-				// TODO log
-				return nil
-			}
-			logCh <- &line
-			return nil
-		})
-		errCh <- err
-		close(errCh)
-	}()
-	return logCh, errCh, nil
+	dataCh, errCh := sse.ReceiveLoop[*livelog.Line](ctx, resp.RawBody(), nil)
+	return dataCh, errCh, nil
 }
