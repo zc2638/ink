@@ -87,7 +87,7 @@ func (w *Worker) Run(ctx context.Context) error {
 			for {
 				select {
 				case <-wCtx.Done():
-					return context.Canceled
+					return wCtx.Err()
 				default:
 				}
 
@@ -106,7 +106,7 @@ func (w *Worker) Run(ctx context.Context) error {
 					select {
 					case <-time.After(time.Second * time.Duration(waitSec)):
 					case <-wCtx.Done():
-						return err
+						return wCtx.Err()
 					}
 					continue
 				}
@@ -210,24 +210,35 @@ func execute(
 	for _, step := range status.Steps {
 		stepSpec := spec.GetStep(step.Name)
 
+		stepLog := log.With(
+			"step_id", step.ID,
+			"step_name", step.Name,
+		)
+
 		step.Started = time.Now().Unix()
 		if stepSpec == nil || failed {
 			step.Phase = v1.PhaseSkipped
 			step.Stopped = step.Started
-			if err := client.StepEnd(ctx, step); err != nil {
-				return fmt.Errorf("step(%s) end request failed: %v", step.Name, err)
-			}
-			continue
-		}
-		if canceled {
-			step.Phase = v1.PhaseCanceled
+
+			stepLog.Debug("Execute step end request by skipped")
 			if err := client.StepEnd(ctx, step); err != nil {
 				return fmt.Errorf("step(%s) end request failed: %v", step.Name, err)
 			}
 			continue
 		}
 
+		if canceled {
+			step.Phase = v1.PhaseCanceled
+
+			stepLog.Debug("Execute step end request by canceled")
+			if err := client.StepEnd(ctx, step); err != nil {
+				return fmt.Errorf("step(%s) end request failed: %v", step.Name, err)
+			}
+			continue
+		}
 		step.Phase = v1.PhaseRunning
+
+		stepLog.Debug("Execute step begin request")
 		if err := client.StepBegin(ctx, step); err != nil {
 			return fmt.Errorf("step(%s) begin request failed: %v", step.Name, err)
 		}
@@ -238,13 +249,15 @@ func execute(
 			}
 			if err := client.LogUpload(ctx, step.ID, lines, isAll); err != nil {
 				if errors.Is(ctx.Err(), context.Canceled) {
-					log.Debug("Upload log canceled")
+					stepLog.Debug("Upload log canceled")
 					return
 				}
-				log.Error("Upload log failed", "error", err)
+				stepLog.Error("Upload log failed", "error", err)
 			}
 		}
 		wc := livelog.NewWriter(logHandle)
+
+		stepLog.Debug("Execute step hook")
 		state, err := hook.Step(ctx, spec, stepSpec, wc)
 		_ = wc.Close()
 
@@ -253,32 +266,31 @@ func execute(
 		if errors.Is(err, context.Canceled) {
 			step.Phase = v1.PhaseCanceled
 			canceled = true
-			log.Debug("Execute step hook cancel", "step", step.Name)
+			stepLog.Debug("Execute step hook cancel")
 		} else if err != nil {
 			step.Phase = v1.PhaseFailed
 			step.Error = err.Error()
 			failed = true
-			log.Error("Execute step hook failed",
-				"error", err,
-				"step", step.Name,
-			)
+			stepLog.Error("Execute step hook failed")
 		}
 
 		if state != nil {
 			if state.OOMKilled {
-				log.Debug("received oom kill.")
+				stepLog.Debug("received oom kill.")
 				state.ExitCode = 137
 			} else {
-				log.Debugf("received exit code %d", state.ExitCode)
+				stepLog.Debugf("received exit code %d", state.ExitCode)
 			}
 			// if the exit code is 78, the system will skip all
 			// subsequent pending steps in the pipeline.
 			if state.ExitCode == 78 {
-				log.Debug("received exit code 78. early exit.")
+				stepLog.Debug("received exit code 78. early exit.")
 				step.Phase = v1.PhaseSkipped
 				failed = true
 			}
 		}
+
+		stepLog.Debug("Execute step end request")
 		if err := client.StepEnd(ctx, step); err != nil {
 			return fmt.Errorf("step(%s) end request failed: %v", step.Name, err)
 		}

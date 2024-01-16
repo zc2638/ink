@@ -48,6 +48,9 @@ type Workflow struct {
 
 func (s *Workflow) GetStep(name string) *Step {
 	for _, v := range s.Steps {
+		if v == nil {
+			continue
+		}
 		if v.Name == name {
 			return v
 		}

@@ -23,12 +23,8 @@ import (
 
 func Handler(middlewares chi.Middlewares) http.Handler {
 	r := chi.NewRouter()
-	r.Use(
-		middleware.Recoverer,
-		middleware.NoCache,
-		middleware.Logger,
-	)
 	r.Use(middlewares...)
+	r.Use(middleware.NoCache)
 
 	r.Post("/status", handleStatus)
 	r.Post("/stage", handleRequest)
