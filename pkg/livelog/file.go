@@ -167,7 +167,7 @@ func (f *file) Watch(ctx context.Context, id string) (<-chan *Line, <-chan struc
 	return sub.handler, sub.waitForClose(), nil
 }
 
-func (f *file) Write(ctx context.Context, id string, line *Line) error {
+func (f *file) Write(ctx context.Context, id string, line *Line, args ...any) error {
 	fi := f.get(id)
 	if fi == nil {
 		return fmt.Errorf("log stream not found for %s", id)
@@ -190,6 +190,11 @@ func (f *file) Write(ctx context.Context, id string, line *Line) error {
 	}
 	f.mux.Unlock()
 
+	for _, arg := range args {
+		if v, ok := arg.(PublishOption); ok && !bool(v) {
+			return nil
+		}
+	}
 	for client := range clients {
 		client.publish(line)
 	}

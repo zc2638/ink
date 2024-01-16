@@ -25,12 +25,14 @@ const LineMaxBuffer = 3000
 type Interface interface {
 	List(ctx context.Context, id string) ([]*Line, error)
 	Watch(ctx context.Context, id string) (<-chan *Line, <-chan struct{}, error)
-	Write(ctx context.Context, id string, line *Line) error
+	Write(ctx context.Context, id string, line *Line, args ...any) error
 	LineCount(ctx context.Context, id string) int
 	Reset(ctx context.Context, id string) error
 	Create(ctx context.Context, id string) error
 	Delete(ctx context.Context, id string) error
 }
+
+type PublishOption bool
 
 type Config struct {
 	File *ConfigFile `json:"file,omitempty"`

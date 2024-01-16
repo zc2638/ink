@@ -509,14 +509,16 @@ func handleLogUpload() http.HandlerFunc {
 			return
 		}
 
+		var opts []any
 		if isAll {
 			if err := ll.Reset(ctx, stepID); err != nil {
 				ctr.InternalError(w, err)
 				return
 			}
+			opts = []any{livelog.PublishOption(false)}
 		}
 		for _, line := range lines {
-			if err := ll.Write(ctx, stepID, line); err != nil {
+			if err := ll.Write(ctx, stepID, line, opts); err != nil {
 				ctr.InternalError(w, err)
 				return
 			}
