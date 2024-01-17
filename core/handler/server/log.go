@@ -16,7 +16,6 @@ package server
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"strconv"
 
@@ -124,15 +123,14 @@ func logWatch() http.HandlerFunc {
 			return
 		}
 
-		errCh := make(chan error)
 		go func() {
 			select {
 			case <-ctx.Done():
 			case <-sender.WaitForClose():
 			case <-closeCh:
-				errCh <- io.EOF
+				sender.Close()
 			}
 		}()
-		_ = sse.SendLoop[*livelog.Line](ctx, sender, lineCh, errCh)
+		_ = sse.SendLoop[*livelog.Line](ctx, sender, lineCh, nil, 0, 0)
 	}
 }

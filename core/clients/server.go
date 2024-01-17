@@ -341,6 +341,7 @@ func (c *serverV1) LogWatch(ctx context.Context, namespace, name string, number,
 		return nil, nil, err
 	}
 
-	dataCh, errCh := sse.ReceiveLoop[*livelog.Line](ctx, resp.RawBody(), nil)
-	return dataCh, errCh, nil
+	receiver := sse.NewReceiver[*livelog.Line](resp.RawBody(), nil)
+	go receiver.Run(ctx)
+	return receiver.Data(), receiver.Err(), nil
 }
