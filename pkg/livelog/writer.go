@@ -63,7 +63,18 @@ func (w *writer) Write(p []byte) (n int, err error) {
 }
 
 func (w *writer) Close() error {
-	close(w.closeCh)
+	w.closeCh <- struct{}{}
+
+	for {
+		select {
+		case line := <-w.lineCh:
+			w.lines = append(w.lines, line)
+			continue
+		default:
+		}
+		break
+	}
+
 	lineLen := len(w.lines)
 	if w.handler != nil && lineLen > 0 {
 		if lineLen > w.index {
@@ -78,6 +89,7 @@ func (w *writer) process() {
 	for {
 		select {
 		case <-w.closeCh:
+			close(w.closeCh)
 			return
 		case line := <-w.lineCh:
 			w.lines = append(w.lines, line)
