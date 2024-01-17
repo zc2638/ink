@@ -63,6 +63,13 @@ func (w *writer) Write(p []byte) (n int, err error) {
 }
 
 func (w *writer) Close() error {
+	select {
+	case _, ok := <-w.closeCh:
+		if !ok {
+			return nil
+		}
+	default:
+	}
 	w.closeCh <- struct{}{}
 
 	for {

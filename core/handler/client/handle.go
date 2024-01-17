@@ -503,14 +503,14 @@ func handleLogUpload() http.HandlerFunc {
 
 		ctx := r.Context()
 		ll := livelog.FromContext(ctx)
-		lineCount := ll.LineCount(ctx, stepID)
-		if lineCount == len(lines) {
-			ctr.Success(w)
-			return
-		}
 
 		var opts []any
 		if isAll {
+			lineCount := ll.LineCount(ctx, stepID)
+			if lineCount == len(lines) {
+				ctr.Success(w)
+				return
+			}
 			if err := ll.Reset(ctx, stepID); err != nil {
 				ctr.InternalError(w, err)
 				return
@@ -518,7 +518,7 @@ func handleLogUpload() http.HandlerFunc {
 			opts = []any{livelog.PublishOption(false)}
 		}
 		for _, line := range lines {
-			if err := ll.Write(ctx, stepID, line, opts); err != nil {
+			if err := ll.Write(ctx, stepID, line, opts...); err != nil {
 				ctr.InternalError(w, err)
 				return
 			}
