@@ -16,11 +16,8 @@ package command
 
 import (
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -106,51 +103,6 @@ func getPage(cmd *cobra.Command) *v1.Pagination {
 	return &v1.Pagination{Page: page, Size: size}
 }
 
-func getFileData(cmd *cobra.Command) ([]files.Item, error) {
-	fp, err := cmd.Flags().GetString("file")
-	if err != nil {
-		return nil, err
-	}
-	if len(fp) == 0 {
-		return nil, errors.New("file path is not defined")
-	}
-
-	stat, err := os.Stat(fp)
-	if err != nil {
-		return nil, err
-	}
-
-	if !stat.IsDir() {
-		item, err := files.ReadFile(fp)
-		if err != nil {
-			return nil, err
-		}
-		return []files.Item{*item}, nil
-	}
-
-	dirs, err := os.ReadDir(fp)
-	if err != nil {
-		return nil, err
-	}
-	var set []files.Item
-	for _, entry := range dirs {
-		if entry.IsDir() {
-			continue
-		}
-
-		name := filepath.Join(fp, entry.Name())
-		item, err := files.ReadFile(name)
-		if errors.Is(err, files.ErrUnknownExt) {
-			continue
-		}
-		if err != nil {
-			return nil, err
-		}
-		set = append(set, *item)
-	}
-	return set, nil
-}
-
 func write(b []byte) {
 	fmt.Println(string(b))
 }
@@ -181,11 +133,19 @@ func Indent(n int, s string) string {
 }
 
 func parseObjects(cmd *cobra.Command) (map[string][]v1.UnstructuredObject, error) {
-	items, err := getFileData(cmd)
+	fp, err := cmd.Flags().GetString("file")
 	if err != nil {
 		return nil, err
 	}
+	items, err := files.ReadFiles(fp)
+	if err != nil {
+		return nil, err
+	}
+	return ParseFilesToObjects(items)
+}
 
+func ParseFilesToObjects(items []files.Item) (map[string][]v1.UnstructuredObject, error) {
+	var err error
 	objSet := make(map[string][]v1.UnstructuredObject)
 	for _, item := range items {
 		jsonBytes := item.Data

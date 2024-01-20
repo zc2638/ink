@@ -54,3 +54,44 @@ func ReadFile(name string) (*Item, error) {
 	item.Data = fb
 	return item, nil
 }
+
+func ReadFiles(fp string) ([]Item, error) {
+	if len(fp) == 0 {
+		return nil, errors.New("file path is not defined")
+	}
+
+	stat, err := os.Stat(fp)
+	if err != nil {
+		return nil, err
+	}
+
+	if !stat.IsDir() {
+		item, err := ReadFile(fp)
+		if err != nil {
+			return nil, err
+		}
+		return []Item{*item}, nil
+	}
+
+	dirs, err := os.ReadDir(fp)
+	if err != nil {
+		return nil, err
+	}
+	var set []Item
+	for _, entry := range dirs {
+		if entry.IsDir() {
+			continue
+		}
+
+		name := filepath.Join(fp, entry.Name())
+		item, err := ReadFile(name)
+		if errors.Is(err, ErrUnknownExt) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		set = append(set, *item)
+	}
+	return set, nil
+}
