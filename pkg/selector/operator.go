@@ -1,4 +1,4 @@
-// Copyright © 2023 zc2638 <zc2638@qq.com>.
+// Copyright © 2024 zc2638 <zc2638@qq.com>.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,11 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1
+package selector
 
-type Data struct {
-	Build    *Build    `json:"build,omitempty"`
-	Workflow *Workflow `json:"workflow,omitempty"`
-	Status   *Stage    `json:"status,omitempty"`
-	Secrets  []*Secret `json:"secrets,omitempty"`
-}
+type Operator string
+
+const (
+	DoesNotExist Operator = "!"
+	Equals       Operator = "="
+	In           Operator = "in"
+	NotEquals    Operator = "!="
+	NotIn        Operator = "notin"
+	Exists       Operator = "exists"
+	GreaterThan  Operator = "gt"
+	LessThan     Operator = "lt"
+)

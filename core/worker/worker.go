@@ -146,8 +146,14 @@ func Run(ctx context.Context, client clients.WorkerV1, hook Hook) error {
 	if workflow == nil || status == nil {
 		return errors.New("stage data not found")
 	}
+
 	log = log.With("namespace", workflow.GetNamespace())
 	log.Debug("Get data success", "build_id", status.BuildID)
+
+	var settings map[string]string
+	if data.Build != nil {
+		settings = data.Build.Settings
+	}
 
 	ctx = wslog.WithContext(ctx, log)
 	eg, runCtx := errgroup.WithContext(ctx)
@@ -159,7 +165,7 @@ func Run(ctx context.Context, client clients.WorkerV1, hook Hook) error {
 		return err
 	})
 	eg.Go(func() error {
-		if err := execute(runCtx, client, hook, workflow, status, data.Secrets); err != nil {
+		if err := execute(runCtx, client, hook, workflow, status, data.Secrets, settings); err != nil {
 			return err
 		}
 		return context.Canceled
@@ -181,6 +187,7 @@ func execute(
 	workflow *v1.Workflow,
 	status *v1.Stage,
 	secrets []*v1.Secret,
+	settings map[string]string,
 ) error {
 	log := wslog.FromContext(ctx)
 	log.Debug("Execute stage begin request")
@@ -190,12 +197,24 @@ func execute(
 		return fmt.Errorf("convert to worker stage failed: %v", err)
 	}
 
+	status.Started = time.Now().Unix()
+	if !workflow.Spec.When.Match(settings) {
+		status.Phase = v1.PhaseSkipped
+		for _, step := range status.Steps {
+			step.Phase = v1.PhaseSkipped
+			step.Started = status.Started
+		}
+		if err := client.StageEnd(ctx, status); err != nil {
+			return fmt.Errorf("skip stage failed: %v", err)
+		}
+		return nil
+	}
+
 	var (
 		failed   bool
 		canceled bool
 	)
 	status.Phase = v1.PhaseRunning
-	status.Started = time.Now().Unix()
 	if err := client.StageBegin(ctx, status); err != nil {
 		return fmt.Errorf("stage begin request failed: %v", err)
 	}

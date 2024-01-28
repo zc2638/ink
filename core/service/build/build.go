@@ -17,9 +17,9 @@ package build
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/zc2638/ink/core/scheduler"
-
 	"gorm.io/gorm"
 
 	storageV1 "github.com/zc2638/ink/pkg/api/storage/v1"
@@ -165,24 +165,30 @@ func (s *srv) Create(ctx context.Context, namespace, name string, settings map[s
 		return 0, errors.New("workflow resource not found")
 	}
 
+	var workflowList []storageV1.Workflow
+	if err := db.Where("namespace = ?", box.Namespace).
+		Where("name in (?)", workflowNames).
+		Find(&workflowList).Error; err != nil {
+		return 0, err
+	}
+	workflows := make([]*v1.Workflow, 0, len(workflowList))
+	for _, v := range workflowList {
+		workflow, err := v.ToAPI()
+		if err != nil {
+			return 0, fmt.Errorf("convert workflow(%s) failed: %v", v.Name, err)
+		}
+		workflows = append(workflows, workflow)
+	}
+	if len(workflows) == 0 {
+		return 0, errors.New("no workflow matched")
+	}
+
 	err = db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&buildS).Error; err != nil {
 			return err
 		}
 
-		for k, v := range workflowNames {
-
-			sd := &storageV1.Workflow{
-				Namespace: box.Namespace,
-				Name:      v,
-			}
-			if err := tx.Where(sd).First(sd).Error; err != nil {
-				return err
-			}
-			workflow, err := sd.ToAPI()
-			if err != nil {
-				return err
-			}
+		for k, workflow := range workflows {
 			status := &v1.Stage{
 				BoxID:     box.ID,
 				BuildID:   buildS.ID,
@@ -193,6 +199,10 @@ func (s *srv) Create(ctx context.Context, namespace, name string, settings map[s
 				Worker:    *workflow.Worker(),
 				DependsOn: workflow.Spec.DependsOn,
 			}
+			if !workflow.Spec.When.Match(settings) {
+				status.Phase = v1.PhaseSkipped
+			}
+
 			var statusS storageV1.Stage
 			if err := statusS.FromAPI(status); err != nil {
 				return err
@@ -208,6 +218,10 @@ func (s *srv) Create(ctx context.Context, namespace, name string, settings map[s
 					Phase:   v1.PhasePending,
 					Name:    sv.Name,
 				}
+				if status.Phase == v1.PhaseSkipped {
+					step.Phase = v1.PhaseSkipped
+				}
+
 				stepS := new(storageV1.Step)
 				stepS.FromAPI(step)
 				if err := tx.Create(stepS).Error; err != nil {

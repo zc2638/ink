@@ -57,6 +57,8 @@ func NewCtl() *cobra.Command {
 	Register(cmd, "exec", "execute a configuration to a resource by file name", exec,
 		flags.NewStringEnvFlag(constant.Name, "file", "",
 			"that contains the configuration to exec"),
+		flags.NewStringSliceEnvFlag(constant.Name, "set", nil,
+			"set the required parameters when execute. e.g. a=1"),
 	)
 
 	secretCmd := &cobra.Command{Use: "secret", Short: "secret operation"}
@@ -447,6 +449,20 @@ func apply(cmd *cobra.Command, _ []string) error {
 }
 
 func exec(cmd *cobra.Command, _ []string) error {
+	setValues, err := cmd.Flags().GetStringSlice("set")
+	if err != nil {
+		return err
+	}
+
+	settings := make(map[string]string)
+	for _, v := range setValues {
+		parts := strings.SplitN(v, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		settings[parts[0]] = parts[1]
+	}
+
 	objSet, err := parseObjects(cmd)
 	if err != nil {
 		return err
@@ -461,6 +477,10 @@ func exec(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 		allSecrets = append(allSecrets, &secret)
+	}
+	build := &v1.Build{
+		Phase:    v1.PhasePending,
+		Settings: settings,
 	}
 
 	// TODO 暂时仅支持 workflow 单独串行执行
@@ -496,6 +516,7 @@ func exec(cmd *cobra.Command, _ []string) error {
 		}
 
 		data := &v1.Data{
+			Build:    build,
 			Workflow: &workflow,
 			Status: &v1.Stage{
 				Number:    1,

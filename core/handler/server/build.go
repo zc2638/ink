@@ -69,8 +69,10 @@ func buildCreate(buildSrv service.Build) http.HandlerFunc {
 		name := wrapper.URLParam(r, "name")
 
 		settings := make(map[string]string)
-		if err := json.NewDecoder(r.Body).Decode(&settings); err != nil {
-			wrapper.BadRequest(w, err)
+		_ = json.NewDecoder(r.Body).Decode(&settings)
+		query := r.URL.Query()
+		for k := range query {
+			settings[k] = query.Get(k)
 		}
 
 		number, err := buildSrv.Create(r.Context(), namespace, name, settings)

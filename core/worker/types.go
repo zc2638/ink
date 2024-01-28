@@ -199,17 +199,13 @@ func Convert(in *v1.Workflow, status *v1.Stage, secrets []*v1.Secret) (*Workflow
 				env[ev.Name] = ev.Value
 				continue
 			}
-			// secret to env
-			if ev.ValueFrom != nil && ev.ValueFrom.SecretKeyRef != nil {
-				_, secData := ev.ValueFrom.SecretKeyRef.Find(secrets)
-				env[ev.Name] = secData
+			if ev.ValueFrom != nil {
+				// secret to env
+				if ev.ValueFrom.SecretKeyRef != nil {
+					_, secData := ev.ValueFrom.SecretKeyRef.Find(secrets)
+					env[ev.Name] = secData
+				}
 			}
-		}
-		for _, sv := range v.Settings {
-			if sv.Name == "" || sv.Value == "" {
-				continue
-			}
-			env[sv.Name] = sv.Value
 		}
 		if len(env) > 0 {
 			step.Env = env

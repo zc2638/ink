@@ -16,7 +16,9 @@ package flags
 
 import (
 	"flag"
+	"fmt"
 	"strconv"
+	"strings"
 )
 
 func NewFlag(name string, value Value, usage string) *flag.Flag {
@@ -31,6 +33,15 @@ func NewFlag(name string, value Value, usage string) *flag.Flag {
 func NewStringEnvFlag(envPrefix, name, defValue, usage string) *flag.Flag {
 	val := GetDefaultEnv(envPrefix, name, defValue)
 	value := NewStringValue(val)
+	return NewFlag(name, value, usage)
+}
+
+func NewStringSliceEnvFlag(envPrefix, name string, defValue []string, usage string) *flag.Flag {
+	val := GetDefaultEnv(envPrefix, name, "")
+	if val != "" {
+		defValue = strings.Split(val, " ")
+	}
+	value := NewStringSliceValue(defValue)
 	return NewFlag(name, value, usage)
 }
 
@@ -67,6 +78,44 @@ func (s *stringValue) Set(val string) error {
 func (s *stringValue) Get() any { return string(*s) }
 
 func (s *stringValue) String() string { return string(*s) }
+
+func NewStringSliceValue(val []string) Value {
+	p := make([]string, 0)
+	return NewStringSliceVarValue(val, &p)
+}
+
+func NewStringSliceVarValue(val []string, p *[]string) Value {
+	*p = val
+	return &stringSlice{value: p}
+}
+
+type stringSlice struct {
+	value   *[]string
+	changed bool
+}
+
+func (s *stringSlice) Set(val string) error {
+	if s.value == nil {
+		return fmt.Errorf("no target (nil pointer to []string)")
+	}
+	if !s.changed {
+		*s.value = make([]string, 0)
+	}
+	*s.value = append(*s.value, val)
+	s.changed = true
+	return nil
+}
+
+func (s *stringSlice) Get() any {
+	return *s.value
+}
+
+func (s *stringSlice) String() string {
+	if s == nil || s.value == nil {
+		return ""
+	}
+	return "[" + strings.Join(*s.value, " ") + "]"
+}
 
 func NewBoolValue(val bool) Value {
 	p := new(bool)

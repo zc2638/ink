@@ -14,6 +14,8 @@
 
 package v1
 
+import "github.com/zc2638/ink/pkg/selector"
+
 type Workflow struct {
 	Metadata `yaml:",inline"`
 
@@ -30,13 +32,14 @@ func (w *Workflow) Worker() *Worker {
 }
 
 type WorkflowSpec struct {
-	Steps            []Flow   `json:"steps" yaml:"steps"`
-	WorkingDir       string   `json:"workingDir,omitempty" yaml:"workingDir,omitempty"`
-	Concurrency      int      `json:"concurrency,omitempty" yaml:"concurrency,5omitempty"`
-	Volumes          []Volume `json:"volumes,omitempty" yaml:"volumes,omitempty"`
-	DependsOn        []string `json:"dependsOn,omitempty" yaml:"dependsOn,omitempty"`
-	ImagePullSecrets []string `json:"imagePullSecrets,omitempty" yaml:"imagePullSecrets,omitempty"`
-	Worker           *Worker  `json:"worker,omitempty" yaml:"worker,omitempty"`
+	Steps            []Flow             `json:"steps" yaml:"steps"`
+	WorkingDir       string             `json:"workingDir,omitempty" yaml:"workingDir,omitempty"`
+	Concurrency      int                `json:"concurrency,omitempty" yaml:"concurrency,5omitempty"`
+	Volumes          []Volume           `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	DependsOn        []string           `json:"dependsOn,omitempty" yaml:"dependsOn,omitempty"`
+	ImagePullSecrets []string           `json:"imagePullSecrets,omitempty" yaml:"imagePullSecrets,omitempty"`
+	Worker           *Worker            `json:"worker,omitempty" yaml:"worker,omitempty"`
+	When             *selector.Selector `json:"when,omitempty" yaml:"when,omitempty"`
 }
 
 type Flow struct {
@@ -55,13 +58,6 @@ type Flow struct {
 	DNS             []string       `json:"dns,omitempty" yaml:"dns,omitempty"`
 	DNSSearch       []string       `json:"dnsSearch,omitempty" yaml:"dnsSearch,omitempty"`
 	ExtraHosts      []string       `json:"extraHosts,omitempty" yaml:"extraHosts,omitempty"`
-	Settings        []Setting      `json:"settings,omitempty" yaml:"settings,omitempty"`
-}
-
-type Setting struct {
-	Name  string `json:"name" yaml:"name"`
-	Desc  string `json:"desc,omitempty" yaml:"desc,omitempty"`
-	Value string `json:"value,omitempty" yaml:"value,omitempty"`
 }
 
 type PullPolicy string
@@ -123,6 +119,9 @@ type EnvVar struct {
 	// Name of the environment variable.
 	Name string `json:"name" yaml:"name"`
 
+	// Description only used to describe the env
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+
 	// Variable references $(VAR_NAME) are expanded
 	// using the previously defined environment variables in the container and
 	// any service environment variables. If a variable cannot be resolved,
@@ -139,7 +138,7 @@ type EnvVar struct {
 
 // EnvVarSource represents a source for the value of an EnvVar.
 type EnvVarSource struct {
-	SecretKeyRef *SecretKeySelector `json:"secretKeyRef,omitempty" protobuf:"bytes,4,opt,name=secretKeyRef"`
+	SecretKeyRef *SecretKeySelector `json:"secretKeyRef,omitempty"`
 }
 
 // SecretKeySelector selects a key of a Secret.
