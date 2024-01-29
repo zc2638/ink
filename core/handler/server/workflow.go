@@ -62,6 +62,12 @@ func workflowCreate(workflowSrv service.Workflow) http.HandlerFunc {
 			wrapper.BadRequest(w, err)
 			return
 		}
+		if in.Spec.When != nil {
+			if err := in.Spec.When.Validate(); err != nil {
+				wrapper.BadRequest(w, err)
+				return
+			}
+		}
 
 		if err := workflowSrv.Create(r.Context(), &in); err != nil {
 			wrapper.InternalError(w, err)
@@ -81,9 +87,15 @@ func workflowUpdate(workflowSrv service.Workflow) http.HandlerFunc {
 			wrapper.BadRequest(w, err)
 			return
 		}
+		if in.Spec.When != nil {
+			if err := in.Spec.When.Validate(); err != nil {
+				wrapper.BadRequest(w, err)
+				return
+			}
+		}
+
 		in.SetNamespace(namespace)
 		in.SetName(name)
-
 		if err := workflowSrv.Update(r.Context(), &in); err != nil {
 			wrapper.InternalError(w, err)
 			return
