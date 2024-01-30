@@ -19,6 +19,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/99nil/gopkg/sets"
+
+	"github.com/zc2638/ink/pkg/selector"
+
 	"github.com/zc2638/ink/core/scheduler"
 	"gorm.io/gorm"
 
@@ -154,28 +158,46 @@ func (s *srv) Create(ctx context.Context, namespace, name string, settings map[s
 		return 0, err
 	}
 
-	workflowNames := make([]string, 0, len(box.Resources))
+	var selectors []*selector.Selector
+	workflowNames := sets.New[string]()
 	for _, v := range box.Resources {
 		if v.Kind != v1.KindWorkflow {
 			continue
 		}
-		workflowNames = append(workflowNames, v.Name)
+		workflowNames.Add(v.Name)
+		if v.LabelSelector != nil {
+			selectors = append(selectors, v.LabelSelector)
+		}
 	}
 	if len(workflowNames) == 0 {
 		return 0, errors.New("workflow resource not found")
 	}
 
 	var workflowList []storageV1.Workflow
-	if err := db.Where("namespace = ?", box.Namespace).
-		Where("name in (?)", workflowNames).
-		Find(&workflowList).Error; err != nil {
+	dbW := db.Where("namespace = ?", box.Namespace)
+	if !workflowNames.Has("") {
+		dbW = dbW.Where("name in (?)", workflowNames)
+	}
+	if err := dbW.Find(&workflowList).Error; err != nil {
 		return 0, err
 	}
+
 	workflows := make([]*v1.Workflow, 0, len(workflowList))
 	for _, v := range workflowList {
 		workflow, err := v.ToAPI()
 		if err != nil {
 			return 0, fmt.Errorf("convert workflow(%s) failed: %v", v.Name, err)
+		}
+
+		matched := true
+		for _, sv := range selectors {
+			matched = sv.Match(workflow.Labels)
+			if matched {
+				break
+			}
+		}
+		if !matched {
+			continue
 		}
 		workflows = append(workflows, workflow)
 	}

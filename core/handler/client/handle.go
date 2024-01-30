@@ -33,6 +33,7 @@ import (
 	storageV1 "github.com/zc2638/ink/pkg/api/storage/v1"
 	"github.com/zc2638/ink/pkg/database"
 	"github.com/zc2638/ink/pkg/livelog"
+	"github.com/zc2638/ink/pkg/selector"
 )
 
 // handleStatus returns a `http.HandlerFunc`
@@ -178,12 +179,16 @@ func handleInfo() http.HandlerFunc {
 		}
 
 		// get secrets
+		var selectors []*selector.Selector
 		secretNames := sets.NewString()
 		for _, v := range box.Resources {
 			if v.Kind != v1.KindSecret {
 				continue
 			}
 			secretNames.Add(v.Name)
+			if v.LabelSelector != nil {
+				selectors = append(selectors, v.LabelSelector)
+			}
 		}
 		var secretList []storageV1.Secret
 		secretDB := db.Where(&storageV1.Secret{Namespace: box.GetNamespace()})
@@ -199,6 +204,17 @@ func handleInfo() http.HandlerFunc {
 			if err != nil {
 				wrapper.InternalError(w, err)
 				return
+			}
+
+			matched := true
+			for _, sv := range selectors {
+				matched = sv.Match(secret.Labels)
+				if matched {
+					break
+				}
+			}
+			if !matched {
+				continue
 			}
 			data.Secrets = append(data.Secrets, secret)
 		}

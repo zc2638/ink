@@ -16,8 +16,11 @@ package v1
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/99nil/gopkg/cycle"
+
+	"github.com/zc2638/ink/pkg/selector"
 )
 
 // Box defines a collection of stage executions.
@@ -35,10 +38,23 @@ func (b *Box) Validate(workflows []*Workflow) error {
 	if graph.DetectCycles() {
 		return errors.New("dependency cycle detected in workflows")
 	}
+
+	for index, rv := range b.Resources {
+		if rv.LabelSelector == nil {
+			if rv.Name == "" {
+				return fmt.Errorf("invalid resource at index: %d", index)
+			}
+			continue
+		}
+		if err := rv.LabelSelector.Validate(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 type BoxResource struct {
-	Kind string `json:"kind" yaml:"kind"`
-	Name string `json:"name" yaml:"name"`
+	Kind          string             `json:"kind" yaml:"kind"`
+	Name          string             `json:"name,omitempty" yaml:"name,omitempty"`
+	LabelSelector *selector.Selector `json:"labelSelector,omitempty" yaml:"labelSelector,omitempty"`
 }
