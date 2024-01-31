@@ -18,10 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
-	"github.com/99nil/gopkg/sets"
-
-	"github.com/zc2638/ink/pkg/selector"
+	"slices"
 
 	"github.com/zc2638/ink/core/scheduler"
 	"gorm.io/gorm"
@@ -158,24 +155,14 @@ func (s *srv) Create(ctx context.Context, namespace, name string, settings map[s
 		return 0, err
 	}
 
-	var selectors []*selector.Selector
-	workflowNames := sets.New[string]()
-	for _, v := range box.Resources {
-		if v.Kind != v1.KindWorkflow {
-			continue
-		}
-		workflowNames.Add(v.Name)
-		if v.LabelSelector != nil {
-			selectors = append(selectors, v.LabelSelector)
-		}
-	}
+	workflowNames, selectors := box.GetSelectors(v1.KindWorkflow, settings)
 	if len(workflowNames) == 0 {
 		return 0, errors.New("workflow resource not found")
 	}
 
 	var workflowList []storageV1.Workflow
 	dbW := db.Where("namespace = ?", box.Namespace)
-	if !workflowNames.Has("") {
+	if !slices.Contains(workflowNames, "") {
 		dbW = dbW.Where("name in (?)", workflowNames)
 	}
 	if err := dbW.Find(&workflowList).Error; err != nil {

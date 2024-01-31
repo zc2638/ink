@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
@@ -33,7 +34,6 @@ import (
 	storageV1 "github.com/zc2638/ink/pkg/api/storage/v1"
 	"github.com/zc2638/ink/pkg/database"
 	"github.com/zc2638/ink/pkg/livelog"
-	"github.com/zc2638/ink/pkg/selector"
 )
 
 // handleStatus returns a `http.HandlerFunc`
@@ -179,25 +179,17 @@ func handleInfo() http.HandlerFunc {
 		}
 
 		// get secrets
-		var selectors []*selector.Selector
-		secretNames := sets.NewString()
-		for _, v := range box.Resources {
-			if v.Kind != v1.KindSecret {
-				continue
-			}
-			secretNames.Add(v.Name)
-			if v.LabelSelector != nil {
-				selectors = append(selectors, v.LabelSelector)
-			}
-		}
 		var secretList []storageV1.Secret
-		secretDB := db.Where(&storageV1.Secret{Namespace: box.GetNamespace()})
-		if !secretNames.Has("") {
-			secretDB = secretDB.Where("name in (?)", secretNames.List())
-		}
-		if err := secretDB.Find(&secretList).Error; err != nil {
-			wrapper.InternalError(w, err)
-			return
+		secretNames, selectors := box.GetSelectors(v1.KindSecret, build.Settings)
+		if len(secretNames) > 0 {
+			secretDB := db.Where(&storageV1.Secret{Namespace: box.GetNamespace()})
+			if !slices.Contains(secretNames, "") {
+				secretDB = secretDB.Where("name in (?)", secretNames)
+			}
+			if err := secretDB.Find(&secretList).Error; err != nil {
+				wrapper.InternalError(w, err)
+				return
+			}
 		}
 		for _, v := range secretList {
 			secret, err := v.ToAPI()

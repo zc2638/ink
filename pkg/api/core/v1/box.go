@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/99nil/gopkg/cycle"
+	"github.com/99nil/gopkg/sets"
 
 	"github.com/zc2638/ink/pkg/selector"
 )
@@ -28,6 +29,27 @@ type Box struct {
 	Metadata `yaml:",inline"`
 
 	Resources []BoxResource `json:"resources" yaml:"resources"`
+}
+
+func (b *Box) GetSelectors(kind string, settings map[string]string) (names []string, selectors []*selector.Selector) {
+	nameSet := sets.New[string]()
+	for _, v := range b.Resources {
+		if v.Kind != kind {
+			continue
+		}
+		if v.Selector != nil {
+			if ok := v.Selector.Match(settings); !ok {
+				continue
+			}
+		}
+
+		nameSet.Add(v.Name)
+		if v.LabelSelector != nil {
+			selectors = append(selectors, v.LabelSelector)
+		}
+	}
+	names = nameSet.List()
+	return
 }
 
 func (b *Box) Validate(workflows []*Workflow) error {
@@ -40,14 +62,18 @@ func (b *Box) Validate(workflows []*Workflow) error {
 	}
 
 	for index, rv := range b.Resources {
-		if rv.LabelSelector == nil {
-			if rv.Name == "" {
-				return fmt.Errorf("invalid resource at index: %d", index)
-			}
-			continue
+		if rv.Name == "" && rv.Selector == nil && rv.LabelSelector == nil {
+			return fmt.Errorf("invalid resource at index: %d", index)
 		}
-		if err := rv.LabelSelector.Validate(); err != nil {
-			return err
+		if rv.Selector != nil {
+			if err := rv.Selector.Validate(); err != nil {
+				return err
+			}
+		}
+		if rv.LabelSelector != nil {
+			if err := rv.LabelSelector.Validate(); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -56,5 +82,6 @@ func (b *Box) Validate(workflows []*Workflow) error {
 type BoxResource struct {
 	Kind          string             `json:"kind" yaml:"kind"`
 	Name          string             `json:"name,omitempty" yaml:"name,omitempty"`
+	Selector      *selector.Selector `json:"selector,omitempty" yaml:"selector,omitempty"`
 	LabelSelector *selector.Selector `json:"labelSelector,omitempty" yaml:"labelSelector,omitempty"`
 }
