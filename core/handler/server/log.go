@@ -16,11 +16,13 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/99nil/gopkg/ctr"
 	"github.com/99nil/gopkg/sse"
+	"gorm.io/gorm"
 
 	"github.com/zc2638/ink/core/handler/wrapper"
 	storageV1 "github.com/zc2638/ink/pkg/api/storage/v1"
@@ -62,8 +64,12 @@ func logInfo() http.HandlerFunc {
 		}
 		logS := new(storageV1.Log)
 		logS.SetID(stepS.ID)
-		if err := db.Where(logS).First(logS).Error; err != nil {
+		if err := db.Where(logS).First(logS).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			wrapper.InternalError(w, err)
+			return
+		}
+		if logS.Data == nil {
+			ctr.OK(w, []struct{}{})
 			return
 		}
 		ctr.Bytes(w, logS.Data)

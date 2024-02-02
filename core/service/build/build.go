@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/99nil/gopkg/sets"
+
 	"github.com/zc2638/ink/core/scheduler"
 	"gorm.io/gorm"
 
@@ -270,6 +272,42 @@ func (s *srv) Cancel(ctx context.Context, namespace, name string, number uint64)
 	}
 	if build.Phase.IsDone() {
 		return errors.New("already done")
+	}
+
+	var stages []storageV1.Stage
+	if err := db.Where(&storageV1.Stage{
+		BoxID:   buildS.BoxID,
+		BuildID: buildS.ID,
+		Phase:   v1.PhasePending.String(),
+	}).Find(&stages).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("find pending stages failed: %v", err)
+	}
+
+	stageIDSet := sets.New[uint64]()
+	for _, v := range stages {
+		stageIDSet.Add(v.ID)
+	}
+	stageIds := stageIDSet.List()
+
+	if len(stageIds) > 0 {
+		err := db.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Model(&storageV1.Stage{}).
+				Where("id in (?)", stageIds).
+				Where(&storageV1.Stage{Phase: v1.PhasePending.String()}).
+				Update("phase", v1.PhaseCanceled).Error; err != nil {
+				return fmt.Errorf("cancel pending stages failed: %v", err)
+			}
+			if err := tx.Model(&storageV1.Step{}).
+				Where("stage_id in (?)", stageIds).
+				Where(&storageV1.Step{Phase: v1.PhasePending.String()}).
+				Update("phase", v1.PhaseCanceled).Error; err != nil {
+				return fmt.Errorf("cancel pending steps failed: %v", err)
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	sched := scheduler.FromContext(ctx)

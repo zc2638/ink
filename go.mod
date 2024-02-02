@@ -3,7 +3,7 @@ module github.com/zc2638/ink
 go 1.21.0
 
 require (
-	github.com/99nil/gopkg v0.0.0-20240131094835-25a1aa9ff089
+	github.com/99nil/gopkg v0.0.0-20240202180301-972815b49f29
 	github.com/docker/distribution v2.8.2+incompatible
 	github.com/docker/docker v24.0.5+incompatible
 	github.com/docker/go-units v0.5.0
