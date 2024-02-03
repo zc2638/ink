@@ -16,6 +16,9 @@ package workflow
 
 import (
 	"context"
+	"reflect"
+
+	"gorm.io/gorm"
 
 	"github.com/zc2638/ink/core/constant"
 	"github.com/zc2638/ink/core/service"
@@ -93,7 +96,18 @@ func (s *srv) Create(ctx context.Context, data *v1.Workflow) error {
 	if err := sd.FromAPI(data); err != nil {
 		return err
 	}
-	return db.Create(sd).Error
+	labels := common.ConvertLabels(v1.KindWorkflow, sd.Namespace, sd.Name, data.Labels)
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := db.Create(sd).Error; err != nil {
+			return err
+		}
+		if len(labels) > 0 {
+			if err := db.CreateInBatches(labels, 100).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (s *srv) Update(ctx context.Context, data *v1.Workflow) error {
@@ -105,15 +119,41 @@ func (s *srv) Update(ctx context.Context, data *v1.Workflow) error {
 	if err := db.Where(sd).First(sd).Error; err != nil {
 		return err
 	}
+	origin, err := sd.ToAPI()
+	if err != nil {
+		return err
+	}
 	if err := sd.FromAPI(data); err != nil {
 		return err
 	}
 
-	where := &storageV1.Workflow{
-		Namespace: data.GetNamespace(),
-		Name:      data.GetName(),
+	var labels []storageV1.Label
+	labelChanged := !reflect.DeepEqual(origin.Labels, data.Labels)
+	if labelChanged {
+		labels = common.ConvertLabels(v1.KindWorkflow, sd.Namespace, sd.Name, data.Labels)
 	}
-	return db.Model(where).Where(where).Updates(sd).Error
+	where := &storageV1.Workflow{Namespace: sd.Namespace, Name: sd.Name}
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := db.Model(where).Where(where).Updates(sd).Error; err != nil {
+			return err
+		}
+		if labelChanged {
+			if err := db.Where(&storageV1.Label{
+				Namespace: where.Namespace,
+				Name:      where.Name,
+				Kind:      v1.KindWorkflow,
+			}).Delete(&storageV1.Label{}).Error; err != nil {
+				return err
+			}
+		}
+		if len(labels) > 0 {
+			if err := db.CreateInBatches(labels, 100).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (s *srv) Delete(ctx context.Context, namespace, name string) error {
@@ -127,5 +167,14 @@ func (s *srv) Delete(ctx context.Context, namespace, name string) error {
 	if count == 0 {
 		return constant.ErrNoRecord
 	}
-	return db.Where(sd).Delete(sd).Error
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := db.Where(sd).Delete(sd).Error; err != nil {
+			return err
+		}
+		return db.Where(&storageV1.Label{
+			Namespace: sd.Namespace,
+			Name:      sd.Name,
+			Kind:      v1.KindWorkflow,
+		}).Delete(&storageV1.Label{}).Error
+	})
 }

@@ -16,6 +16,9 @@ package box
 
 import (
 	"context"
+	"reflect"
+
+	"gorm.io/gorm"
 
 	"github.com/zc2638/ink/core/constant"
 	"github.com/zc2638/ink/core/service"
@@ -79,24 +82,34 @@ func (s *srv) Info(ctx context.Context, namespace, name string) (*v1.Box, error)
 
 func (s *srv) Create(ctx context.Context, data *v1.Box) error {
 	db := database.FromContext(ctx)
-
 	if err := validateResources(db, data); err != nil {
 		return err
 	}
 
 	var count int64
-	boxS := &storageV1.Box{Namespace: data.GetNamespace(), Name: data.GetName()}
-	if err := db.Where(boxS).Model(boxS).Count(&count).Error; err != nil {
+	sd := &storageV1.Box{Namespace: data.GetNamespace(), Name: data.GetName()}
+	if err := db.Where(sd).Model(sd).Count(&count).Error; err != nil {
 		return err
 	}
 	if count > 0 {
 		return constant.ErrAlreadyExists
 	}
 
-	if err := boxS.FromAPI(data); err != nil {
+	if err := sd.FromAPI(data); err != nil {
 		return err
 	}
-	return db.Create(boxS).Error
+	labels := common.ConvertLabels(v1.KindBox, sd.Namespace, sd.Name, data.Labels)
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := db.Create(sd).Error; err != nil {
+			return err
+		}
+		if len(labels) > 0 {
+			if err := db.CreateInBatches(labels, 100).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (s *srv) Update(ctx context.Context, data *v1.Box) error {
@@ -106,35 +119,66 @@ func (s *srv) Update(ctx context.Context, data *v1.Box) error {
 		return err
 	}
 
-	boxS := &storageV1.Box{Namespace: data.GetNamespace(), Name: data.GetName()}
-	if err := db.Where(boxS).First(boxS).Error; err != nil {
+	sd := &storageV1.Box{Namespace: data.GetNamespace(), Name: data.GetName()}
+	if err := db.Where(sd).First(sd).Error; err != nil {
 		return err
 	}
-	if err := boxS.FromAPI(data); err != nil {
+	origin, err := sd.ToAPI()
+	if err != nil {
+		return err
+	}
+	if err := sd.FromAPI(data); err != nil {
 		return err
 	}
 
-	where := &storageV1.Box{
-		Namespace: data.GetNamespace(),
-		Name:      data.GetName(),
+	var labels []storageV1.Label
+	labelChanged := !reflect.DeepEqual(origin.Labels, data.Labels)
+	if labelChanged {
+		labels = common.ConvertLabels(v1.KindBox, sd.Namespace, sd.Name, data.Labels)
 	}
-	return db.Model(where).Where(where).Updates(boxS).Error
+	where := &storageV1.Box{Namespace: sd.Namespace, Name: sd.Name}
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := db.Model(where).Where(where).Updates(sd).Error; err != nil {
+			return err
+		}
+		if labelChanged {
+			if err := db.Where(&storageV1.Label{
+				Namespace: where.Namespace,
+				Name:      where.Name,
+				Kind:      v1.KindBox,
+			}).Delete(&storageV1.Label{}).Error; err != nil {
+				return err
+			}
+		}
+		if len(labels) > 0 {
+			if err := db.CreateInBatches(labels, 100).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (s *srv) Delete(ctx context.Context, namespace, name string) error {
 	db := database.FromContext(ctx)
 
-	boxS := &storageV1.Box{
-		Namespace: namespace,
-		Name:      name,
-	}
-
 	var count int64
-	if err := db.Where(boxS).Model(boxS).Count(&count).Error; err != nil {
+	sd := &storageV1.Box{Namespace: namespace, Name: name}
+	if err := db.Where(sd).Model(sd).Count(&count).Error; err != nil {
 		return err
 	}
 	if count == 0 {
 		return constant.ErrNoRecord
 	}
-	return db.Where(boxS).Delete(boxS).Error
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := db.Where(sd).Delete(sd).Error; err != nil {
+			return err
+		}
+		return db.Where(&storageV1.Label{
+			Namespace: sd.Namespace,
+			Name:      sd.Name,
+			Kind:      v1.KindBox,
+		}).Delete(&storageV1.Label{}).Error
+	})
 }

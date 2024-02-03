@@ -17,6 +17,7 @@ package common
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/99nil/gopkg/sets"
 
@@ -30,13 +31,13 @@ func SelectNamesByLabels(ctx context.Context, kind, namespace string, labels map
 	}
 
 	db := database.FromContext(ctx)
-	db = db.Where(&storageV1.Label{Namespace: namespace, Kind: kind})
+	db = db.Model(&storageV1.Label{}).Where(&storageV1.Label{Namespace: namespace, Kind: kind})
 
 	var start bool
 	nameSet := sets.New[string]()
 	for k, v := range labels {
 		var selectNames []string
-		if err := db.Where("key = ?", k).Where("value = ?", v).Pluck("name", &selectNames).Error; err != nil {
+		if err := db.Where("key", k).Where("value", v).Pluck("name", &selectNames).Error; err != nil {
 			return nil, fmt.Errorf("select label(%s=%s) failed: %v", k, v, err)
 		}
 
@@ -55,4 +56,22 @@ func SelectNamesByLabels(ctx context.Context, kind, namespace string, labels map
 		}
 	}
 	return nameSet.List(), nil
+}
+
+func ConvertLabels(kind, namespace, name string, in map[string]string) []storageV1.Label {
+	var labels []storageV1.Label
+	for k, v := range in {
+		k = strings.TrimSpace(k)
+		if k == "" {
+			continue
+		}
+		labels = append(labels, storageV1.Label{
+			Namespace: namespace,
+			Name:      name,
+			Kind:      kind,
+			Key:       k,
+			Value:     v,
+		})
+	}
+	return labels
 }
