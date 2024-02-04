@@ -28,7 +28,8 @@ import (
 type Box struct {
 	Metadata `yaml:",inline"`
 
-	Resources []BoxResource `json:"resources" yaml:"resources"`
+	Resources []BoxResource     `json:"resources" yaml:"resources"`
+	Settings  map[string]string `json:"settings,omitempty" yaml:"settings,omitempty"`
 }
 
 func (b *Box) GetSelectors(kind string, settings map[string]string) (names []string, selectors []*selector.Selector) {

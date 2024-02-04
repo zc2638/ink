@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/99nil/gopkg/sets"
@@ -146,18 +147,21 @@ func (s *srv) Create(ctx context.Context, namespace, name string, settings map[s
 		return 0, err
 	}
 
+	currentSettings := make(map[string]string)
+	maps.Copy(currentSettings, box.Settings)
+	maps.Copy(currentSettings, settings)
 	build := &v1.Build{
 		BoxID:    box.ID,
 		Number:   uint64(buildCount) + 1,
 		Phase:    v1.PhasePending,
-		Settings: settings,
+		Settings: currentSettings,
 	}
 	var buildS storageV1.Build
 	if err := buildS.FromAPI(build); err != nil {
 		return 0, err
 	}
 
-	workflowNames, selectors := box.GetSelectors(v1.KindWorkflow, settings)
+	workflowNames, selectors := box.GetSelectors(v1.KindWorkflow, currentSettings)
 	if len(workflowNames) == 0 {
 		return 0, errors.New("workflow resource not found")
 	}
@@ -210,7 +214,7 @@ func (s *srv) Create(ctx context.Context, namespace, name string, settings map[s
 				Worker:    *workflow.Worker(),
 				DependsOn: workflow.Spec.DependsOn,
 			}
-			if !workflow.Spec.When.Match(settings) {
+			if !workflow.Spec.When.Match(currentSettings) {
 				status.Phase = v1.PhaseSkipped
 			}
 

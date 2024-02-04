@@ -18,6 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -472,25 +474,113 @@ func exec(cmd *cobra.Command, _ []string) error {
 
 	allSecrets := make([]*v1.Secret, 0)
 	for _, obj := range objSet[v1.KindSecret] {
-		var secret v1.Secret
-		if err := obj.ToObject(&secret); err != nil {
+		var item v1.Secret
+		if err := obj.ToObject(&item); err != nil {
 			return err
 		}
-		allSecrets = append(allSecrets, &secret)
+		allSecrets = append(allSecrets, &item)
 	}
+
+	allWorkflows := make([]*v1.Workflow, 0)
+	for _, obj := range objSet[v1.KindWorkflow] {
+		var item v1.Workflow
+		if err := obj.ToObject(&item); err != nil {
+			return err
+		}
+		allWorkflows = append(allWorkflows, &item)
+	}
+
+	allBoxes := make([]*v1.Box, 0)
+	for _, obj := range objSet[v1.KindBox] {
+		var box v1.Box
+		if err := obj.ToObject(&box); err != nil {
+			return err
+		}
+		allBoxes = append(allBoxes, &box)
+	}
+	if len(allBoxes) == 0 {
+		return execBuild(wc, allWorkflows, allSecrets, settings)
+	}
+
+	for _, box := range allBoxes {
+		currentSettings := make(map[string]string)
+		maps.Copy(currentSettings, box.Settings)
+		maps.Copy(currentSettings, settings)
+
+		var workflows []*v1.Workflow
+		workflowNames, workflowSelectors := box.GetSelectors(v1.KindWorkflow, currentSettings)
+		if len(workflowNames) > 0 {
+			containAll := slices.Contains(workflowNames, "")
+			for _, item := range allWorkflows {
+				if !containAll && !slices.Contains(workflowNames, item.GetName()) {
+					continue
+				}
+
+				matched := true
+				for _, ss := range workflowSelectors {
+					matched = ss.Match(item.Labels)
+					if matched {
+						break
+					}
+				}
+				if !matched {
+					continue
+				}
+				workflows = append(workflows, item)
+			}
+		}
+		if len(workflows) == 0 {
+			continue
+		}
+
+		var secrets []*v1.Secret
+		secretNames, secretSelector := box.GetSelectors(v1.KindSecret, currentSettings)
+		if len(secretNames) > 0 {
+			containAll := slices.Contains(secretNames, "")
+			for _, item := range allSecrets {
+				if !containAll && !slices.Contains(secretNames, item.GetName()) {
+					continue
+				}
+
+				matched := true
+				for _, ss := range secretSelector {
+					matched = ss.Match(item.Labels)
+					if matched {
+						break
+					}
+				}
+				if !matched {
+					continue
+				}
+				secrets = append(secrets, item)
+			}
+		}
+		if err := execBuild(wc, workflows, secrets, currentSettings); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func execBuild(
+	wc clients.WorkerV1,
+	allWorkflows []*v1.Workflow,
+	allSecrets []*v1.Secret,
+	settings map[string]string,
+) error {
+	dataCh := make(chan *v1.Data)
+
 	build := &v1.Build{
 		Phase:    v1.PhasePending,
 		Settings: settings,
 	}
 
 	// TODO 暂时仅支持 workflow 单独串行执行
-	for _, obj := range objSet[v1.KindWorkflow] {
-		var workflow v1.Workflow
-		if err := obj.ToObject(&workflow); err != nil {
-			return err
-		}
-
-		var hook worker.Hook
+	for _, workflow := range allWorkflows {
+		var (
+			hook worker.Hook
+			err  error
+		)
 		workerObj := workflow.Worker()
 		switch workerObj.Kind {
 		case v1.WorkerKindHost:
@@ -517,7 +607,7 @@ func exec(cmd *cobra.Command, _ []string) error {
 
 		data := &v1.Data{
 			Build:    build,
-			Workflow: &workflow,
+			Workflow: workflow,
 			Status: &v1.Stage{
 				Number:    1,
 				Phase:     v1.PhasePending,
