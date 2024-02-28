@@ -78,9 +78,10 @@ func (s *Secret) ToAPI() (*v1.Secret, error) {
 	if err := json.Unmarshal([]byte(s.Data), &out); err != nil {
 		return nil, err
 	}
-	out.Namespace = s.Namespace
-	out.Name = s.Name
 	out.Creation = s.CreatedAt
+	out.SetName(s.Name)
+	out.SetNamespace(s.Namespace)
+	out.SetKind(v1.KindSecret)
 	return &out, nil
 }
 
@@ -112,9 +113,10 @@ func (s *Workflow) ToAPI() (*v1.Workflow, error) {
 	if err := json.Unmarshal([]byte(s.Data), &out); err != nil {
 		return nil, err
 	}
-	out.Namespace = s.Namespace
-	out.Name = s.Name
 	out.Creation = s.CreatedAt
+	out.SetName(s.Name)
+	out.SetNamespace(s.Namespace)
+	out.SetKind(v1.KindWorkflow)
 	return &out, nil
 }
 
@@ -157,9 +159,10 @@ func (s *Box) ToAPI() (*v1.Box, error) {
 		return nil, err
 	}
 	out.ID = s.ID
-	out.Namespace = s.Namespace
-	out.Name = s.Name
 	out.Creation = s.CreatedAt
+	out.SetName(s.Name)
+	out.SetNamespace(s.Namespace)
+	out.SetKind(v1.KindBox)
 	if out.Labels == nil {
 		out.Labels = make(map[string]string)
 	}
