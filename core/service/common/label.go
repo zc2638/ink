@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"strings"
 
+	"gorm.io/gorm"
+
 	"github.com/99nil/gopkg/sets"
 
 	storageV1 "github.com/zc2638/ink/pkg/api/storage/v1"
@@ -31,7 +33,9 @@ func SelectNamesByLabels(ctx context.Context, kind, namespace string, labels map
 	}
 
 	db := database.FromContext(ctx)
-	db = db.Model(&storageV1.Label{}).Where(&storageV1.Label{Namespace: namespace, Kind: kind})
+	db = db.Model(&storageV1.Label{}).
+		Where(&storageV1.Label{Namespace: namespace, Kind: kind}).
+		Session(&gorm.Session{})
 
 	var start bool
 	nameSet := sets.New[string]()
@@ -46,11 +50,9 @@ func SelectNamesByLabels(ctx context.Context, kind, namespace string, labels map
 			nameSet.Add(selectNames...)
 			continue
 		}
-		for _, sn := range selectNames {
-			if !nameSet.Has(sn) {
-				nameSet.Remove(sn)
-			}
-		}
+
+		selectNameSet := sets.New(selectNames...)
+		nameSet = nameSet.Intersection(selectNameSet)
 		if nameSet.Len() == 0 {
 			return nil, nil
 		}
