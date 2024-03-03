@@ -34,7 +34,7 @@ func (w *Workflow) Worker() *Worker {
 type WorkflowSpec struct {
 	Steps            []Flow             `json:"steps" yaml:"steps"`
 	WorkingDir       string             `json:"workingDir,omitempty" yaml:"workingDir,omitempty"`
-	Concurrency      int                `json:"concurrency,omitempty" yaml:"concurrency,5omitempty"`
+	Concurrency      int                `json:"concurrency,omitempty" yaml:"concurrency,omitempty"`
 	Volumes          []Volume           `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	DependsOn        []string           `json:"dependsOn,omitempty" yaml:"dependsOn,omitempty"`
 	ImagePullSecrets []string           `json:"imagePullSecrets,omitempty" yaml:"imagePullSecrets,omitempty"`
