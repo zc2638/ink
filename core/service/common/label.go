@@ -19,9 +19,8 @@ import (
 	"fmt"
 	"strings"
 
-	"gorm.io/gorm"
-
 	"github.com/99nil/gopkg/sets"
+	"gorm.io/gorm"
 
 	storageV1 "github.com/zc2638/ink/pkg/api/storage/v1"
 	"github.com/zc2638/ink/pkg/database"
