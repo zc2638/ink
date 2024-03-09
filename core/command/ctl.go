@@ -499,7 +499,7 @@ func exec(cmd *cobra.Command, _ []string) error {
 		allBoxes = append(allBoxes, &box)
 	}
 	if len(allBoxes) == 0 {
-		return execBuild(wc, allWorkflows, allSecrets, settings)
+		return execBuild(wc, dataCh, allWorkflows, allSecrets, settings)
 	}
 
 	for _, box := range allBoxes {
@@ -555,7 +555,7 @@ func exec(cmd *cobra.Command, _ []string) error {
 				secrets = append(secrets, item)
 			}
 		}
-		if err := execBuild(wc, workflows, secrets, currentSettings); err != nil {
+		if err := execBuild(wc, dataCh, workflows, secrets, currentSettings); err != nil {
 			return err
 		}
 	}
@@ -564,12 +564,11 @@ func exec(cmd *cobra.Command, _ []string) error {
 
 func execBuild(
 	wc clients.WorkerV1,
+	dataCh chan *v1.Data,
 	allWorkflows []*v1.Workflow,
 	allSecrets []*v1.Secret,
 	settings map[string]string,
 ) error {
-	dataCh := make(chan *v1.Data)
-
 	build := &v1.Build{
 		Phase:    v1.PhasePending,
 		Settings: settings,
