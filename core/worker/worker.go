@@ -306,6 +306,9 @@ func execute(
 				stepLog.Debug("received exit code 78. early exit.")
 				step.Phase = v1.PhaseSkipped
 				failed = true
+			} else if state.ExitCode > 0 {
+				step.Phase = v1.PhaseFailed
+				failed = true
 			}
 		}
 

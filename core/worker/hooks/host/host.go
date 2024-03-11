@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/zc2638/wslog"
 
@@ -49,7 +50,8 @@ func (h *host) Begin(ctx context.Context, spec *worker.Workflow) error {
 			args = step.Shell[1:]
 		}
 		cmdData := shell.Script(step.Command)
-		fp := filepath.Join(scriptPath, step.Name+shell.Suffix)
+		stepName := strings.ReplaceAll(step.Name, " ", "_")
+		fp := filepath.Join(scriptPath, stepName+shell.Suffix)
 		if err := os.WriteFile(fp, []byte(cmdData), os.ModePerm); err != nil {
 			log.Error("cannot write file", "error", err)
 			return err
