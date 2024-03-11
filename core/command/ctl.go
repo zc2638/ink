@@ -26,7 +26,6 @@ import (
 
 	"github.com/99nil/gopkg/printer"
 	"github.com/spf13/cobra"
-	"github.com/zc2638/wslog"
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 
@@ -627,13 +626,6 @@ func execBuild(
 			data.Status.Steps = append(data.Status.Steps, step)
 		}
 
-		log := wslog.With(
-			"name", workflow.GetName(),
-			"namespace", workflow.GetNamespace(),
-			"worker_kind", workerObj.Kind.String(),
-		)
-		log.Info("Begin workflow")
-
 		eg, ctx := errgroup.WithContext(context.Background())
 		eg.Go(func() error { return worker.Run(ctx, wc, hook) })
 		eg.Go(func() error {
@@ -646,7 +638,6 @@ func execBuild(
 		if err := eg.Wait(); err != nil {
 			return err
 		}
-		log.Info("End workflow")
 	}
 	return nil
 }

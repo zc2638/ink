@@ -74,16 +74,20 @@ func (c *clientDirect) Info(_ context.Context, stageID uint64) (*v1.Data, error)
 	return data, nil
 }
 
-func (c *clientDirect) StageBegin(_ context.Context, _ *v1.Stage) error {
+func (c *clientDirect) StageBegin(_ context.Context, stage *v1.Stage) error {
+	fmt.Printf("\x1b[1m[STAGE:%s] %s\x1b[0m\n", stage.Worker.Kind, stage.Name)
 	return nil
 }
 
-func (c *clientDirect) StageEnd(_ context.Context, _ *v1.Stage) error {
+func (c *clientDirect) StageEnd(_ context.Context, stage *v1.Stage) error {
+	if stage.Phase == v1.PhaseSkipped {
+		fmt.Printf("\x1b[1m[STAGE:%s](SKIPPED) %s\x1b[0m\n", stage.Worker.Kind, stage.Name)
+	}
 	return nil
 }
 
 func (c *clientDirect) StepBegin(_ context.Context, step *v1.Step) error {
-	fmt.Printf("\x1b[1m%s\x1b[0m\n", "[STEP] "+step.Name)
+	fmt.Printf("\x1b[1m[STEP] %s\x1b[0m\n", step.Name)
 	return nil
 }
 
