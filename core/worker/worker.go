@@ -228,6 +228,9 @@ func execute(
 
 	for _, step := range status.Steps {
 		stepSpec := spec.GetStep(step.Name)
+		if stepSpec != nil {
+			stepSpec.Env = stepSpec.CombineEnv(settings)
+		}
 
 		stepLog := log.With(
 			"step_id", step.ID,
