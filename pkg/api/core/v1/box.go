@@ -24,12 +24,17 @@ import (
 	"github.com/zc2638/ink/pkg/selector"
 )
 
+type BoxStatus struct {
+	Builds int64 `json:"builds"`
+}
+
 // Box defines a collection of stage executions.
 type Box struct {
 	Metadata `yaml:",inline"`
 
 	Resources []BoxResource     `json:"resources" yaml:"resources"`
 	Settings  map[string]string `json:"settings,omitempty" yaml:"settings,omitempty"`
+	Status    BoxStatus         `json:"status,omitempty" yaml:"status,omitempty"`
 }
 
 func (b *Box) GetSelectors(kind string, settings map[string]string) (names []string, selectors []*selector.Selector) {

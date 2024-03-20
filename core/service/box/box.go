@@ -77,7 +77,15 @@ func (s *srv) Info(ctx context.Context, namespace, name string) (*v1.Box, error)
 	if err := db.Where(info).First(info).Error; err != nil {
 		return nil, err
 	}
-	return info.ToAPI()
+	out, err := info.ToAPI()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := db.Model(&storageV1.Build{}).Where(&storageV1.Build{BoxID: info.ID}).Count(&out.Status.Builds).Error; err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (s *srv) Create(ctx context.Context, data *v1.Box) error {
