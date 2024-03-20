@@ -173,6 +173,7 @@ func handleInfo() http.HandlerFunc {
 		}
 
 		data := &v1.Data{
+			Box:      box,
 			Build:    build,
 			Workflow: stage,
 			Status:   status,

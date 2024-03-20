@@ -14,6 +14,11 @@
 
 package v1
 
+import (
+	"maps"
+	"strconv"
+)
+
 type Build struct {
 	ID       uint64            `json:"id" yaml:"id"`
 	BoxID    uint64            `json:"boxID" yaml:"boxID"`
@@ -26,6 +31,19 @@ type Build struct {
 	Stopped  int64             `json:"stopped,omitempty" yaml:"stopped,omitempty"`
 
 	Stages []*Stage `json:"stages,omitempty" yaml:"stages,omitempty"`
+}
+
+func (b *Build) CompleteSettings(box *Box) map[string]string {
+	settings := make(map[string]string)
+	maps.Copy(settings, b.Settings)
+
+	if box != nil {
+		settings["DYNASTY_BOX_NAME"] = box.Name
+		settings["DYNASTY_BOX_NAMESPACE"] = box.Namespace
+	}
+	settings["DYNASTY_BUILD_NUMBER"] = strconv.FormatUint(b.Number, 10)
+
+	return settings
 }
 
 type Stage struct {

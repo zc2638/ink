@@ -154,7 +154,7 @@ func Run(ctx context.Context, client clients.WorkerV1, hook Hook) error {
 
 	var settings map[string]string
 	if data.Build != nil {
-		settings = data.Build.Settings
+		settings = data.Build.CompleteSettings(data.Box)
 	}
 
 	ctx = wslog.WithContext(ctx, log)

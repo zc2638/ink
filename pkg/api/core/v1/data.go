@@ -15,6 +15,7 @@
 package v1
 
 type Data struct {
+	Box      *Box      `json:"box,omitempty"`
 	Build    *Build    `json:"build,omitempty"`
 	Workflow *Workflow `json:"workflow,omitempty"`
 	Status   *Stage    `json:"status,omitempty"`
