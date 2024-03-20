@@ -22,11 +22,13 @@ import (
 	"math"
 	"time"
 
+	"github.com/99nil/gopkg/sets"
 	"github.com/zc2638/wslog"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/zc2638/ink/core/clients"
 	"github.com/zc2638/ink/core/constant"
+	"github.com/zc2638/ink/core/worker/runtime"
 	v1 "github.com/zc2638/ink/pkg/api/core/v1"
 	"github.com/zc2638/ink/pkg/livelog"
 )
@@ -210,6 +212,26 @@ func execute(
 		return nil
 	}
 
+	secretValueSet := sets.New[string]()
+	for _, secret := range secrets {
+		if err := secret.Decrypt(); err == nil {
+			status.Phase = v1.PhaseFailed
+			status.Error = err.Error()
+			for _, step := range status.Steps {
+				step.Phase = v1.PhaseSkipped
+				step.Started = status.Started
+			}
+			if err := client.StageEnd(ctx, status); err != nil {
+				return fmt.Errorf("stage end failed: %v", err)
+			}
+			return nil
+		}
+		for _, v := range secret.Data {
+			secretValueSet.Add(v)
+		}
+	}
+	secretValueList := secretValueSet.List()
+
 	var (
 		failed   bool
 		canceled bool
@@ -278,6 +300,7 @@ func execute(
 			}
 		}
 		wc := livelog.NewWriter(logHandle)
+		wc = runtime.NewMaskReplacer(wc, secretValueList)
 
 		stepLog.Debug("Execute step hook")
 		state, err := hook.Step(ctx, spec, stepSpec, wc)
