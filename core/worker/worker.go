@@ -214,7 +214,7 @@ func execute(
 
 	secretValueSet := sets.New[string]()
 	for _, secret := range secrets {
-		if err := secret.Decrypt(); err == nil {
+		if err := secret.Decrypt(); err != nil {
 			status.Phase = v1.PhaseFailed
 			status.Error = err.Error()
 			for _, step := range status.Steps {

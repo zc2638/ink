@@ -71,9 +71,10 @@ func toHostConfig(spec *worker.Workflow, step *worker.Step) *container.HostConfi
 			Type: "json-file",
 		},
 	}
-	// windows do not support privileged, so we hard-code
-	// this value to false.
-	if spec.Worker != nil && spec.Worker.Platform.OS == "windows" {
+
+	// windows do not support privileged,
+	// so we hard-code this value to false.
+	if spec.Worker != nil && spec.Worker.Platform != nil && spec.Worker.Platform.OS == "windows" {
 		config.Privileged = false
 	}
 	if len(step.Network) > 0 {
