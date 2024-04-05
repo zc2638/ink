@@ -28,10 +28,6 @@ import (
 )
 
 func toContainerConfig(spec *worker.Workflow, step *worker.Step) *container.Config {
-	env := step.CombineEnv(map[string]string{
-		"INK_SCRIPT": shell.Script(step.Command),
-	})
-
 	cfg := &container.Config{
 		AttachStdin:  false,
 		AttachStdout: true,
@@ -42,13 +38,17 @@ func toContainerConfig(spec *worker.Workflow, step *worker.Step) *container.Conf
 		ArgsEscaped:  false,
 		WorkingDir:   step.WorkingDir,
 		Image:        step.Image,
-		Env:          worker.EnvToSlice(env),
 	}
+
+	var configEnv map[string]string
 
 	if len(step.Entrypoint) > 0 {
 		cfg.Entrypoint = step.Entrypoint
 		cfg.Cmd = step.Command
-	} else {
+	} else if len(step.Command) > 0 {
+		configEnv = map[string]string{
+			"INK_SCRIPT": shell.Script(step.Command),
+		}
 		cmdName, args := shell.Command()
 		if len(step.Shell) > 0 {
 			cmdName = step.Shell[0]
@@ -57,6 +57,8 @@ func toContainerConfig(spec *worker.Workflow, step *worker.Step) *container.Conf
 		cfg.Entrypoint = append([]string{cmdName}, args...)
 		cfg.Cmd = shell.EchoEnvCommand("INK_SCRIPT", cmdName)
 	}
+	env := step.CombineEnv(configEnv)
+	cfg.Env = worker.EnvToSlice(env)
 
 	if len(step.VolumeMounts) != 0 {
 		cfg.Volumes = toVolumeSet(spec, step)
