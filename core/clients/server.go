@@ -193,7 +193,11 @@ func (c *serverV1) WorkflowDelete(ctx context.Context, namespace, name string) e
 	req := c.R(ctx).
 		SetPathParam("namespace", namespace).
 		SetPathParam("name", name)
-	resp, err := req.Delete("/workflow/{namespace}/{name}")
+	uri := "/workflow/{namespace}"
+	if len(name) > 0 {
+		uri += "/{name}"
+	}
+	resp, err := req.Delete(uri)
 	return handleClientError(resp, err)
 }
 
