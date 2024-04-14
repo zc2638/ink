@@ -62,7 +62,7 @@ func Handler(middlewares chi.Middlewares) http.Handler {
 		r.Post("/", workflowCreate(workflowSrv))
 		r.Get("/", workflowList(workflowSrv))
 		r.Get("/{namespace}", workflowList(workflowSrv))
-		r.Post("/{namespace}", workflowDelete(workflowSrv))
+		r.Delete("/{namespace}", workflowDelete(workflowSrv))
 		r.Route("/{namespace}/{name}", func(r chi.Router) {
 			r.Get("/", workflowInfo(workflowSrv))
 			r.Put("/", workflowUpdate(workflowSrv))
